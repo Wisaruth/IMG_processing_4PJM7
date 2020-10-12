@@ -8,7 +8,6 @@ path = "D:/Studio/ProjectModule7/IMG4Test/"
 window_name = 'Color Detection'
 img = cv2.imread(path+"Color_B.jpg")
 hsv_img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-hsv_img = cv2.medianBlur(hsv_img, 5)
 
 
 def mouse_click(event, x ,y ,flags, param):
@@ -16,49 +15,57 @@ def mouse_click(event, x ,y ,flags, param):
         print(x,y)
 # Convert
 
-def color_masking (img_,color,sat,val):          # color : [low,up] degree , sat % and val %   
-    sat[0],sat[1] = sat[0]*255/100,sat[1]*255/100
-    val[0],val[1] = val[0]*255/100,val[1]*255/100 
-    lower_color = np.array([color[0],sat[0],val[0]],dtype = np.uint8)
-    upper_color = np.array([color[1],sat[1],val[1]],dtype = np.uint8)
-    mask = cv2.inRange(img_,lower_color,upper_color)
-    return mask
+def single_hue_masking (clr_img2mask,range_clr,range_sat,range_val):            # Make Mask ( one range color) : [low,up] degree , sat % and val %   
+    lower_color = np.array([range_clr[0],range_sat[0]*255/100,range_val[0]*255/100],dtype = np.uint8)
+    upper_color = np.array([range_clr[1],range_sat[1]*255/100,range_val[1]*255/100],dtype = np.uint8)
+    return cv2.inRange(clr_img2mask,lower_color,upper_color)
 
-def red_color_masking (img_,hue1,hue2,sat,val): 
-    mask1 = color_masking(img_,hue1,sat,val)
-    mask2 = color_masking(img_,hue2,sat,val)
-    cv2.imshow(window_name+"1",mask1)
-    cv2.imshow(window_name+"2",mask2)
-    mask = cv2.bitwise_or(mask1,mask2)
-    return mask
+def due_hue_masking (clr_img2redmask,hue1,hue2,range_sat,range_val):            # Make Mask ( two range color) : [low,up] degree,[low,up] degree, sat % and val % 
+    mask1 = single_hue_masking(clr_img2redmask,hue1,range_sat,range_val)        # For detect red
+    mask2 = single_hue_masking(clr_img2redmask,hue2,range_sat,range_val)
+    return cv2.bitwise_or(mask1,mask2)
 
-#mask = red_color_masking (hsv_img,[0,10],[50,179],[10,100],[10,100])
+def color_detection (img_,hsv_img_,single_mode,hue_,sat_,val_,thrshold_area):   # Detect color
+    clr_det_contours =[]
+    if single_mode :                                                            # find the color mask
+        mask_ = single_hue_masking (hsv_img_,hue_,sat_,val_)
+    else :
+        mask_ = due_hue_masking (hsv_img_,hue_[0],hue_[1],sat_,val_)               
+    _,all_contour,_ = cv2.findContours(mask_,cv2.RETR_EXTERNAL,
+                    cv2.CHAIN_APPROX_NONE)
+    if all_contour is None :                                                    # check that found contour
+        return False,False
+    mask_ = np.zeros(mask_.shape, np.uint8)                                     # make the blank mask  
+    for contour in all_contour :                                                # check area 
+        area = cv2.contourArea(contour)
+        if area > thrshold_area:
+            clr_det_contours.append(contour)
+            cv2.drawContours(mask_,[contour], -1, (255), -1)
+            #for x in range(len(contour)):
+            #    cv2.circle(img, (contour[x][0][0], contour[x][0][1]), 3, (0,0,255), 2)
+    if clr_det_contours is None :                                                    
+        return False,False
+    crop_clrs_img = cv2.bitwise_or(img_,img_,mask=mask_)
+    crop_clrs_img = cv2.medianBlur(crop_clrs_img, 5)
+    return clr_det_contours,crop_clrs_img
 
-mask1 = color_masking(hsv_img,[135,179],[10,100],[5,100])
-mask2 = color_masking(hsv_img,[0,10],[10,100],[5,100])
-mask = cv2.bitwise_or(mask1,mask2)
-
-_,contours,_ = cv2.findContours(mask,cv2.RETR_EXTERNAL,
-                    cv2.CHAIN_APPROX_SIMPLE)
-
-for contour in contours :
-    area = cv2.contourArea(contour)
-    epsilon = 0.005 * cv2.arcLength(contour, True)
-    approx = cv2.approxPolyDP(contour, epsilon, True)
-    if area > 500:
-        cv2.drawContours(img, [approx], -1, (255), 1)
-        for x in range(len(approx)):
-            cv2.circle(img, (approx[x][0][0], approx[x][0][1]), 3, (0,0,255), -1)
-
-    
-cv2.namedWindow(window_name)
-cv2.setMouseCallback(window_name,mouse_click)
-
-while True:
-    key = cv2.waitKey(5)
-    cv2.imshow(window_name,mask)
-    if key == ord('q') :
-        break
+hsv_red = [[0,10],[135,179]]
+hsv_blue = [90,135] 
+sat = [15,100]
+val = [5,100]
+contours,clrs_img = color_detection(img,hsv_img,True,hsv_blue,sat,val,500)
+if contours is not False :  
+    cv2.namedWindow(window_name)
+    cv2.setMouseCallback(window_name,mouse_click)
+    cv2.drawContours(img , contours, -1, (255), 2)
+    while True:
+        key = cv2.waitKey(5)
+        cv2.imshow(window_name,clrs_img )
+        cv2.imshow(window_name+"1",img )
+        if key == ord('q') :
+            break
+else :
+    print("Not found")
  
 
 
