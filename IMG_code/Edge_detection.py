@@ -18,7 +18,7 @@ contours = []
 thepoint = 0
 clicked = 0
 check = 0 
-path = "D:/Studio/ProjectModule7/IMG4Test/"
+path = "C:/Users/ASUS/OneDrive/My work/Project_module7/IMG_test/"
 
 def  img_capture  (camera,name,mode,path):
     imgs =  []
@@ -61,11 +61,11 @@ def CannyThreshold(val):
     img_blur = cv2.GaussianBlur(img_blur,(5,5),0)
     detected_edges = cv2.Canny(img_blur, low_threshold, low_threshold*ratio, kernel_size)
     #mask = detected_edges != 0
-    _,contours_,_= cv2.findContours(detected_edges,cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    _,contours_,_= cv2.findContours(detected_edges,cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
     for index in range(len(contours_)):
         area = cv2.contourArea(contours_[index])
         if area > 200:
-            cv2.drawContours(src, contours_[index], -1, (0, 255, 0), 3)
+            cv2.drawContours(src, contours_[index], -1, (0, 255, 0), 2)
             contours.append(contours_[index])
             #for index in range(0,len(contour),int((len(contour)-1)/2)):
             """for index in range(0,50,10):
@@ -80,7 +80,7 @@ def CannyThreshold(val):
 parser = argparse.ArgumentParser(description='Code for Canny Edge Detector tutorial.')
 parser.add_argument('--input', help='Path to input image.', default='fruits.jpg')
 args = parser.parse_args()
-src = cv2.imread(path+"Edge_img1.jpg")
+src = cv2.imread(path+"Map_A.jpg")
 if src is None:
     print('Could not open or find the image: ', args.input)
     exit(0)
