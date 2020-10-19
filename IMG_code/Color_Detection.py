@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 from matplotlib import pyplot as plt
 
-path = "D:/Studio/ProjectModule7/IMG4Test/"
+path = "C:/Users/ASUS/OneDrive/My work/Project_module7/IMG_test/"
 window_name = 'Color Detection'
 img = cv2.imread(path+"Color_B.jpg")
 hsv_img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
@@ -25,13 +25,17 @@ def due_hue_masking (clr_img2redmask,hue1,hue2,range_sat,range_val):            
     mask2 = single_hue_masking(clr_img2redmask,hue2,range_sat,range_val)
     return cv2.bitwise_or(mask1,mask2)
 
+def deriva_map (crop_clr_img):
+    pass
+
+
 def color_detection (img_,hsv_img_,single_mode,hue_,sat_,val_,thrshold_area):   # Detect color
     clr_det_contours =[]
     if single_mode :                                                            # find the color mask
         mask_ = single_hue_masking (hsv_img_,hue_,sat_,val_)
     else :
         mask_ = due_hue_masking (hsv_img_,hue_[0],hue_[1],sat_,val_)               
-    _,all_contour,_ = cv2.findContours(mask_,cv2.RETR_EXTERNAL,
+    _,all_contour,_ = cv2.findContours(mask_,cv2.RETR_TREE,
                     cv2.CHAIN_APPROX_NONE)
     if all_contour is None :                                                    # check that found contour
         return False,False
