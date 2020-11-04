@@ -57,8 +57,8 @@ def distance_cal (p1,x,y):       # 2 parameters are list
 # val = 10
 def CannyThreshold(val):
     low_threshold = val
-    img_blur = cv2.medianBlur(src_gray,5)
-    img_blur = cv2.GaussianBlur(img_blur,(5,5),0)
+    #img_blur = cv2.medianBlur(src_gray,5)
+    img_blur = cv2.GaussianBlur(src_gray,(5,5),0)
     detected_edges = cv2.Canny(img_blur, low_threshold, low_threshold*ratio, kernel_size)
     #mask = detected_edges != 0
     _,contours_,_= cv2.findContours(detected_edges,cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
@@ -77,12 +77,9 @@ def CannyThreshold(val):
     
     
 
-parser = argparse.ArgumentParser(description='Code for Canny Edge Detector tutorial.')
-parser.add_argument('--input', help='Path to input image.', default='fruits.jpg')
-args = parser.parse_args()
 src = cv2.imread(path+"Map_A.jpg")
 if src is None:
-    print('Could not open or find the image: ', args.input)
+    print('Could not open or find the image: ')
     exit(0)
 src_gray = cv2.cvtColor(src, cv2.COLOR_BGR2GRAY)
 
