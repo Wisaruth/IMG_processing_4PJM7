@@ -23,7 +23,7 @@ def find_canny(low_thres_cannay,gray_img):
     ratio_ = 2
     #gray_img = cv2.medianBlur(gray_img,5)
     
-    gray_img = cv2.GaussianBlur(gray_img,(5,5),0)
+    #gray_img = cv2.GaussianBlur(gray_img,(5,5),0)
     
     result = cv2.Canny(gray_img, low_thres_cannay, low_thres_cannay*ratio_,kernel_size_cannay)
     return result
