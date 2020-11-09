@@ -4,9 +4,9 @@ import cv2
 import numpy as np
 from matplotlib import pyplot as plt
 
-path = "C:/Users/ASUS/OneDrive/My work/Project_module7/IMG_test/"
+path = "C:/Users/wisar/OneDrive/My work/Project_module7/IMG_test/"
 window_name = 'Color Detection'
-img = cv2.imread(path+"Map_2A.jpg")
+img = cv2.imread(path+"real_map_B1.jpg")
 hsv_img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 cood = [0,0]
 ck = False
@@ -69,11 +69,12 @@ def color_detection (img_,hsv_img_,single_mode,hue_,sat_,val_,thrshold_area):   
 
 #hsv_red = [[0,10],[135,179]]
 hsv_ord = [0,20]
-hsv_blue = [90,120] 
-sat = [15,100]
+hsv_blue = [90,120]
+hvs_all = [0,180] 
+sat = [25,100]
 val = [60,100]
 blue_frame = Frame(img.shape)
-contours,clrs_img = color_detection(img,hsv_img,True,hsv_blue,sat,val,500)
+contours,clrs_img = color_detection(img,hsv_img,True,hvs_all,sat,val,500)
 blue_frame = level_clr_map (clrs_img ,blue_frame)
 
 if contours is not False :  
@@ -81,14 +82,15 @@ if contours is not False :
     cv2.setMouseCallback(window_name,mouse_click)
     while True:
         key = cv2.waitKey(5)
-        cv2.imshow(window_name,img )
+        cv2.imshow(window_name,clrs_img)
         if key == ord('q') :
             break
-        if ck :
+        """if ck :
             img = cv2.circle(img, (cood[1],cood[0]), 2, (0, 255, 0), 3)
             print(" sat : {}".format(hsv_img[cood[0]][cood[1]]))
             print(" Level : {}".format(blue_frame.table[cood[0]][cood[1]]))
             ck = False
+        """
 else :
     print("Not found")
  
