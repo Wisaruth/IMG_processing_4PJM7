@@ -1,4 +1,5 @@
 import cv2
+from skimage.morphology import skeletonize
 import math
 import numpy as np
 from matplotlib import pyplot as plt
@@ -96,29 +97,66 @@ def find_symWithCorner(cntset_,target_syms,img_,mode_show):
                         result = cv2.rectangle(img_, (x, y), (x+w, y+h), (0, 255, 0), 2)
                         result = cv2.putText(img_,sym_[1],(x,y),cv2.FONT_HERSHEY_COMPLEX,1,(0,255,0),2)
                     last_coord = [mid_[0],mid_[1],max([w,h])]
-                    new = Symbol(sym_[1],mid_ ,[w,h])
+                    new = Symbol(sym_[1],mid_ ,[x,y,w,h])
                     pass_sym.append(new)
     return pass_sym,result
 
+
               
-"""
+
 
 all_target_sym =[[5,"Star"],[3,"Triangle"],[4,"Rectangle"]]
 window_name = "Edge Detection"
-path = "C:/Users/ASUS/OneDrive/My work/Project_module7/IMG_test/"
+path = "C:/Users/wisar/OneDrive/My work/Project_module7/IMG_test/"
 map_img = cv2.imread(path+"Map_2A.jpg")
 
-
+"""
 gray_map = cv2.cvtColor(map_img, cv2.COLOR_BGR2GRAY)
 _,threshold = cv2.threshold(gray_map , 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-edge_mask = find_canny(22,threshold)
-cntset =find_contours(edge_mask,False,[0,0],False)
+threshold=cv2.bitwise_not(threshold)
+cntset =find_contours(threshold,False,[0,0],False)
 print(len(cntset["cnts"]))
 for index in range(len(cntset["cnts"])):
-    cv2.drawContours(map_img, [cntset["cnts"][index]], -1, (0,255,0), 2)
-    cv2.imshow(window_name,map_img)
-    cv2.waitKey()
- """
+    cv2.drawContours(threshold, [cntset["cnts"][index]], 0, 255, -1)
+erosion = cv2.erode(threshold,kernel,iterations = 1)
+skeleton_lee = skeletonize(erosion, method='lee')
+cv2.imshow(window_name,skeleton_lee)
+cv2.waitKey()
+"""       
+
+"""
+gray_map = cv2.cvtColor(map_img, cv2.COLOR_BGR2GRAY)
+cv2.namedWindow(window_name) 
+kernel = np.ones((3,3),np.uint8) 
+gray_map = unsharp_image(gray_map)
+edge_mask = find_canny(90,gray_map)
+edge_mask = cv2.morphologyEx(edge_mask, cv2.MORPH_CLOSE, kernel)
+edge_mask,_ =hough_transform(edge_mask,1000,10)
+cntset =find_contours(edge_mask,True,[500,3000])
+findsyms,img =find_symWithCorner(cntset,all_target_sym,map_img,True)
+cv2.imshow(window_name,img)
+cv2.waitKey()
+"""
+
+"""
+cv2.namedWindow(window_name)
+bar_name = 'Thrshold'
+cv2.createTrackbar(bar_name,window_name,0,100,nothing)
+kernel = np.ones((3,3),np.uint8)
+while True:
+    key = cv2.waitKey(10)
+    #ret,frame = cap.read()
+    val = cv2.getTrackbarPos(bar_name,window_name)
+    
+    gray_img = cv2.cvtColor(map_img, cv2.COLOR_BGR2GRAY)
+    gray_img = unsharp_image(gray_img)
+    detected_edges = cv2.Canny(gray_img, val, val*2,3)
+    detected_edges = cv2.morphologyEx(detected_edges, cv2.MORPH_CLOSE, kernel)
+    cv2.imshow(window_name, detected_edges)
+    if key == ord('q') or key == ord('Q') :
+        cv2.destroyWindow(window_name)
+        break
+"""
 
 """
 sign_imgs = []
@@ -128,6 +166,11 @@ for j in sign_name :
     sign_imgs.append(sign_img)
 sign_name = ["Star","Triangle","Rectangle"]
 last_coord = [0,0,0]
+
+gray_map = cv2.cvtColor(map_img, cv2.COLOR_BGR2GRAY)
+gray_map = unsharp_image(gray_map)
+edge_mask = find_canny(22,gray_map)
+cntset=find_contours(edge_mask,True,[500,3000])
 for j in range(len(sign_name)):
     for i in range(len(contours)):
         check= check_matching(map_img,sign_imgs[j],0.5,contours[i],coordinate[i])
@@ -142,38 +185,4 @@ for j in range(len(sign_name)):
                 print(sign_name[j]) 
                 last_coord[0],last_coord[1] = mid_[0],mid_[1]
                 last_coord[2] = max([w,h])
-"""        
-
-"""
-gray_map = cv2.cvtColor(map_img, cv2.COLOR_BGR2GRAY)
-cv2.namedWindow(window_name)  
-gray_map = unsharp_image(gray_map)
-edge_mask = find_canny(22,gray_map)
-cv2.imshow(window_name,edge_mask)
-cv2.waitKey()
-edge_mask,_ =hough_transform(edge_mask,1000,10)
-cntset =find_contours(edge_mask,True,[1000,3000],True)
-findsyms,img =find_symWithCorner(cntset,all_target_sym,map_img,True)
-cv2.imshow(window_name,img)
-cv2.waitKey()
-"""
-
-
-
-"""
-cv2.createTrackbar(bar_name,window_name,0,max_lowThreshold,nothing)
-bar_name = 'Thrshold'
-while True:
-    key = cv2.waitKey(10)
-    #ret,frame = cap.read()
-    val = cv2.getTrackbarPos(bar_name,window_name)
-    gray_img = cv2.cvtColor(map_img, cv2.COLOR_BGR2GRAY)
-    gray_img = cv2.medianBlur(gray_img,5)
-    blur_img = cv2.GaussianBlur(gray_img,(5,5),0)
-    detected_edges = cv2.Canny(blur_img, val, val*2,3)
-    
-    cv2.imshow(window_name, detected_edges)
-    if key == ord('q') or key == ord('Q') :
-        cv2.destroyWindow(window_name)
-        break
-"""
+""" 

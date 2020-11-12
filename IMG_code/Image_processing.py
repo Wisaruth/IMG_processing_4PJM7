@@ -7,7 +7,7 @@ class Image :
     def __init__(self,cap_index,path):
         self.cap = cv2.VideoCapture(cap_index)
         self.path=path
-        self.frame=None
+        self.image=None
         self.mpax=None
         self.mpay=None
         self.roi=None
@@ -16,19 +16,19 @@ class Image :
         ret,frame = self.cap.read()
         if ret:
             if raw_mode:
-                self.frame=frame
+                self.image=frame
             else:
                 dst = cv2.remap(frame,self.mapx,self.mapy,cv2.INTER_LINEAR)
                 # crop the image
                 x,y,w,h = self.roi
                 dst = dst[y:y+h, x:x+w]
-                self.frame=dst
+                self.image=dst
         else:
             print("Error: Not find any image")
         
     def saveImg(self,name):
-        if self.frame != None:
-            cv2.imwrite(self.path+name+".jpg",self.frame) 
+        if self.image != None:
+            cv2.imwrite(self.path+name+".jpg",self.image) 
             print("Save Image :"+name)
             return True
         else:
@@ -105,7 +105,7 @@ class Image :
 
 #   Color Detection
     def clr_masking (self,hue_,sat_,val_):            # Make Mask ( one range color) : [low,up] degree , sat % and val %   
-        img = cv2.cvtColor(self.frame, cv2.COLOR_BGR2HSV)
+        img = cv2.cvtColor(self.image, cv2.COLOR_BGR2HSV)
         lower_color = np.array([hue_[0],sat_[0]*255/100,val_[0]*255/100],dtype = np.uint8)
         upper_color = np.array([hue_[1],sat_[1]*255/100,val_[1]*255/100],dtype = np.uint8)
         return cv2.inRange(img,lower_color,upper_color)
@@ -130,7 +130,7 @@ class Image :
                 cv2.drawContours(mask,[contour], -1, (255), -1)
         if clr_det_contours is None :                                                    
             return False,False
-        crop_clrs_img = cv2.bitwise_or(self.frame,self.frame,mask=mask)
+        crop_clrs_img = cv2.bitwise_or(self.image,self.image,mask=mask)
         crop_clrs_img = cv2.medianBlur(crop_clrs_img, 3)
         return clr_det_contours,crop_clrs_img
 
@@ -146,12 +146,4 @@ clr_img,cnt = image.color_detection(single_mode = True,
                                         thrshold_area= 500)
 """
 #------------------------
-
-        
-            
-            
-        
-
-        
-
 
