@@ -18,7 +18,7 @@ def order_points(pts):
 	rect[3] = pts[np.argmax(diff)]
 	# return the ordered coordinates
 	return rect
-def four_point_transform(image, pts):
+def prespective(image, pts):
 	rect = order_points(pts)
 	(tl, tr, br, bl) = rect
 	widthA = np.sqrt(((br[0] - bl[0]) ** 2) + ((br[1] - bl[1]) ** 2))
@@ -57,7 +57,7 @@ while (1):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     aruco_dict = aruco.Dictionary_get(aruco.DICT_4X4_50)
     parameters =  aruco.DetectorParameters_create()
-    corners, ids, rejectedImgPoints = aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
+    corners, ids, _ = aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
     aruco_pts = []
     list_id = [0,1,2,3]
     warped = None
@@ -77,7 +77,7 @@ while (1):
                 list_id.remove(all_id[index][0])
         if len(aruco_pts) == 4:
             aruco_pts = np.asarray(aruco_pts,dtype = "float32")
-            warped = four_point_transform(frame, aruco_pts)
+            warped = prespective(frame, aruco_pts)
             cv2.imshow("Prespective",warped)
     except :
         pass
