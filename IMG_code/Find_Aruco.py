@@ -18,6 +18,7 @@ def order_points(pts):
 	rect[3] = pts[np.argmax(diff)]
 	# return the ordered coordinates
 	return rect
+
 def prespective(image, pts):
 	rect = order_points(pts)
 	(tl, tr, br, bl) = rect
@@ -39,7 +40,8 @@ def prespective(image, pts):
 
 
 cap = cv2.VideoCapture(2)
-
+aruco_dict = aruco.Dictionary_get(aruco.DICT_4X4_50)
+parameters =  aruco.DetectorParameters_create()
 """
 ARUCO : corner          0-------1       3-------0
                         |    ^  |       |       |
@@ -55,8 +57,6 @@ while (1):
     if ret is False or key == ord('q') :
         break
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    aruco_dict = aruco.Dictionary_get(aruco.DICT_4X4_50)
-    parameters =  aruco.DetectorParameters_create()
     corners, ids, _ = aruco.detectMarkers(gray, aruco_dict, parameters=parameters)
     aruco_pts = []
     list_id = [0,1,2,3]

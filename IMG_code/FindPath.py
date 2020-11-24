@@ -11,22 +11,6 @@ all_target_sym =[[5,"Star"],[3,"Triangle"],[4,"Rectangle"]]
 window_name = "Edge Detection"
 map_img = cv2.imread(path)
 
-COM_PORT = "COM4"
-sequence_id = 0
-global ser
-
-def init_serial():
-    global ser
-    ser = serial.Serial()
-    ser.baudrate = 115200
-    ser.port = COM_PORT
-    ser.timeout = None
-    ser.rts = 0
-    ser.open() # Open serial port
-
-    #print port open or clost
-    if ser.isOpen():
-        print('Connected:'  ,ser.portstr)
 
 class Symbol:
     def __init__(self, name,mid,box):
@@ -119,34 +103,6 @@ for j in range(len(symbs)):
         full+= data
         symbs[j].mid[i] = full
 
-
-print(symbs[j].mid[1])
-try:
-    init_serial()
-    
-    for i in symbs:
-        
-        ser.write('F'.encode())
-        time.sleep(0.5)
-        #print(ser.readline())
-        ser.write('X'.encode()+i.mid[0].encode())
-        time.sleep(0.5)
-        ser.write('Y'.encode()+i.mid[1].encode())
-        time.sleep(0.5)
-        ser.write('Z00000'.encode())
-        time.sleep(0.5)
-        ser.write('S'.encode())
-        time.sleep(0.5)
-        print("X{} Y{} Z{}".format(i.mid[0],i.mid[1],0))
-        time.sleep(0.5)
-        x,y,w,h = i.box
-        #map_img = cv2.rectangle(map_img, (x, y), (x+w, y+h), (0, 255, 0), 2)
-        #map_img = cv2.putText(map_img,i.name,(x,y),cv2.FONT_HERSHEY_COMPLEX,1,(0,255,0),2)
-        cv2.imshow(window_name,img)
-        cv2.waitKey()
-    
-except serial.serialutil.SerialException:
-    print("Warning: Serial Port", COM_PORT, "is not connected.")
 
 
 
