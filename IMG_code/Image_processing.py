@@ -9,14 +9,14 @@ class Image :
         self.image = None
         self.gray_image = None
     
-    def get_img(self):
+    def cap_img(self):
         ret,img = self.cap.read()
         if ret :
             return img
         else :
             return False
             
-    def update(self,img):
+    def update_img(self,img):
         self.image = img 
         self.gray_image = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
         

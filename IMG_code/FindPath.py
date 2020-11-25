@@ -2,14 +2,13 @@ import cv2
 import math
 import numpy as np
 from matplotlib import pyplot as plt
-import serial
-import time
-import tkinter as tk
+from skimage.morphology import skeletonize
 
-path = "C:/Users/wisar/OneDrive/My work/Project_module7/IMG_test/Map_2A.jpg"
+path = "C:/Users/wisar/OneDrive/My work/Project_module7/IMG_test/"
 all_target_sym =[[5,"Star"],[3,"Triangle"],[4,"Rectangle"]]
 window_name = "Edge Detection"
-map_img = cv2.imread(path)
+pre_map_img = cv2.imread(path+"Map_2A.jpg")
+real_map_img = cv2.imread(path+"real_map_B1.jpg")
 
 
 class Symbol:
@@ -81,8 +80,32 @@ def find_symWithCorner(cntset_,target_syms,img_,mode_show):
                     pass_sym.append(new)
     return pass_sym,result
 
+low_thres_cannay = 90
+kernel = np.ones((3,3),np.uint8)
 
-              
+gray_map = cv2.cvtColor(pre_map_img, cv2.COLOR_BGR2GRAY)
+_,binary_img = cv2.threshold(gray_map , 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+gray_map = unsharp_image(gray_map)
+edge_mask = cv2.Canny(gray_map, low_thres_cannay, low_thres_cannay*2,3)
+edge_mask = cv2.morphologyEx(edge_mask, cv2.MORPH_CLOSE, kernel)
+edge_mask,_ =hough_transform(edge_mask,1000,10)
+cntset =find_contours(edge_mask,True,[500,3000])
+syms,img =find_symWithCorner(cntset,all_target_sym,pre_map_img,True)
+
+
+binary_img=cv2.bitwise_not(binary_img)
+cntset =find_contours(binary_img,False,[0,0],False)
+
+for index in range(len(cntset["cnts"])):
+    cv2.drawContours(binary_img, [cntset["cnts"][index]], 0, 255, -1)
+erosion = cv2.erode(binary_img,kernel,iterations = 1)
+skelton_mask = skeletonize(erosion, method='lee')
+        
+cv2.imshow(window_name,img)
+cv2.waitKey()
+
+
+"""              
 low_thres_cannay = 90
 gray_map = cv2.cvtColor(map_img, cv2.COLOR_BGR2GRAY)
 cv2.namedWindow(window_name) 
@@ -93,15 +116,8 @@ edge_mask = cv2.morphologyEx(edge_mask, cv2.MORPH_CLOSE, kernel)
 edge_mask,_ =hough_transform(edge_mask,1000,10)
 cntset =find_contours(edge_mask,True,[500,3000])
 symbs,img =find_symWithCorner(cntset,all_target_sym,map_img,True)
+"""
 
-for j in range(len(symbs)):
-    for i in range(2):
-        data = str(symbs[j].mid[i])
-        full =""
-        for num in range(5-len(data)) :
-            full+= "0"
-        full+= data
-        symbs[j].mid[i] = full
 
 
 
