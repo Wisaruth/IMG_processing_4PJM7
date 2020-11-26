@@ -4,7 +4,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from skimage.morphology import skeletonize
 
-path = "C:/Users/wisar/OneDrive/My work/Project_module7/IMG_test/"
+path = "C:/Users/ASUS/OneDrive/My work/Project_module7/IMG_test/"
 all_target_sym =[[5,"Star"],[3,"Triangle"],[4,"Rectangle"]]
 window_name = "Edge Detection"
 pre_map_img = cv2.imread(path+"Map_2A.jpg")
@@ -112,23 +112,48 @@ for sym in syms :
     for index in range(len(pts[:2])) :
         cv2.line(skelton_mask, (x-1+pts[index][1],y-1+pts[index][0]), (sym.mid[0],sym.mid[1]), 255,1)
 
-last_pt = [ori_pt,ori_pt]
-now_pt  = ori_pt 
+
+pt = [0,0]
+pt[0],pt[1] = ori_pt[0],ori_pt[1]
 check = False
-filp = 0
-print(last_pt)
+
+kernel = [[0,1,2],[0,2],[0,1,2]]
+
 while(1):
-    img = cv2.circle(skelton_mask.copy(),(now_pt[0],now_pt[1]) , 2, 255, 2)
+    img = cv2.circle(skelton_mask.copy(),(pt[0],pt[1]) , 2, 255, 2)
     cv2.imshow(window_name,img)
     for j in range(3):
-        for i in range(3):
-            x,y = now_pt[0]-1+i,now_pt[1]-1+j
-            if (now_pt[0] != x or now_pt[1] != y) or (last_pt[filp^1][0] != x or last_pt[filp^1][1] != y) : 
-                if skelton_mask[y][x] == 255:
-                    print("{} Last Pt : {} , Now {} to Pt : {} , {}".format(filp,last_pt,now_pt,x,y))
-                    filp ^= 1
-                    now_pt[0],now_pt[1] = x,y
-                    last_pt[filp]= now_pt
+        for i in kernel[j]:
+            x,y = pt[0]-1+i,pt[1]-1+j
+            if skelton_mask[y][x] == 255: 
+                print("Pt : {} to Pt : {} , {}".format(pt,x,y))
+                skelton_mask[y][x] -= 1
+                pt[0],pt[1] = x,y
+                check = True
+                break
+        if check :
+            check = False
+            break
+    
+    key = cv2.waitKey()
+    if key == ord('q') or key == ord('Q') :
+        break
+
+"""
+pts[0][0],pts[0][1],pts[1][0],pts[1][1] = 657, 100,658, 100
+#pts[0][0],pts[0][1],pts[1][0],pts[1][1] = ori_pt[0],ori_pt[1],ori_pt[0],ori_pt[1]
+flip = 0
+while(1):
+    img = cv2.circle(skelton_mask.copy(),(pts[flip^1][0],pts[flip^1][1]) , 2, 255, 2)
+    cv2.imshow(window_name,img)
+    for j in range(3):
+        for i in kernel[j]:
+            x,y = pts[flip^1][0]-1+i,pts[flip^1][1]-1+j
+            if  (pts[flip][0] != x or pts[flip][1] != y) : 
+                if skelton_mask[y][x] == 255: 
+                    pts[flip][0],pts[flip][1] = x,y
+                    flip ^= 1
+                    print("{} Pt0 : {} , Pt1 {} to Pt : {} , {}".format(flip,pts[0],pts[1],x,y))
                     check = True
                     break
         if check :
@@ -138,25 +163,9 @@ while(1):
     key = cv2.waitKey()
     if key == ord('q') or key == ord('Q') :
         break
-
+"""
 #print(skelton_mask[99:105,192:200])
 
-
-
-
-
-"""              
-low_thres_cannay = 90
-gray_map = cv2.cvtColor(map_img, cv2.COLOR_BGR2GRAY)
-cv2.namedWindow(window_name) 
-kernel = np.ones((3,3),np.uint8) 
-gray_map = unsharp_image(gray_map)
-edge_mask = cv2.Canny(gray_map, low_thres_cannay, low_thres_cannay*2,3)
-edge_mask = cv2.morphologyEx(edge_mask, cv2.MORPH_CLOSE, kernel)
-edge_mask,_ =hough_transform(edge_mask,1000,10)
-cntset =find_contours(edge_mask,True,[500,3000])
-symbs,img =find_symWithCorner(cntset,all_target_sym,map_img,True)
-"""
 
 
 
