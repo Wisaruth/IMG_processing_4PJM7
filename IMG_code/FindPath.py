@@ -69,7 +69,7 @@ def find_symWithCorner(cntset_,target_syms,img_,mode_show):
         for sym_ in target_syms :
             if len(cntset_["approxs"][index])==sym_[0]:
                 x,y,w,h = cntset_["boxcoords"][index]
-                mid_ = [int((x+w)/2),int((y+h)/2)]
+                mid_ = [int(x+(w/2)),int(y+(h/2))]
                 dis_chess = max([abs(last_coord[0]-mid_[0]),abs(last_coord[1]-mid_[1])])
                 if dis_chess> last_coord[2] :
                     if mode_show:
@@ -82,6 +82,7 @@ def find_symWithCorner(cntset_,target_syms,img_,mode_show):
 
 low_thres_cannay = 90
 kernel = np.ones((3,3),np.uint8)
+scale_rect = 10
 
 gray_map = cv2.cvtColor(pre_map_img, cv2.COLOR_BGR2GRAY)
 _,binary_img = cv2.threshold(gray_map , 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
@@ -100,9 +101,48 @@ for index in range(len(cntset["cnts"])):
     cv2.drawContours(binary_img, [cntset["cnts"][index]], 0, 255, -1)
 erosion = cv2.erode(binary_img,kernel,iterations = 1)
 skelton_mask = skeletonize(erosion, method='lee')
-        
-cv2.imshow(window_name,img)
-cv2.waitKey()
+
+for sym in syms :
+    if sym.name == "Star":
+        ori_pt = sym.mid
+    x,y,w,h = sym.box
+    w,h = w+scale_rect,h+scale_rect
+    skelton_mask[y:y+h,x:x+w] = 0
+    pts = np.argwhere(skelton_mask[y-1:y+h+1,x-1:x+w+1]==255)
+    for index in range(len(pts[:2])) :
+        cv2.line(skelton_mask, (x-1+pts[index][1],y-1+pts[index][0]), (sym.mid[0],sym.mid[1]), 255,1)
+
+last_pt = [ori_pt,ori_pt]
+now_pt  = ori_pt 
+check = False
+filp = 0
+print(last_pt)
+while(1):
+    img = cv2.circle(skelton_mask.copy(),(now_pt[0],now_pt[1]) , 2, 255, 2)
+    cv2.imshow(window_name,img)
+    for j in range(3):
+        for i in range(3):
+            x,y = now_pt[0]-1+i,now_pt[1]-1+j
+            if (now_pt[0] != x or now_pt[1] != y) or (last_pt[filp^1][0] != x or last_pt[filp^1][1] != y) : 
+                if skelton_mask[y][x] == 255:
+                    print("{} Last Pt : {} , Now {} to Pt : {} , {}".format(filp,last_pt,now_pt,x,y))
+                    filp ^= 1
+                    now_pt[0],now_pt[1] = x,y
+                    last_pt[filp]= now_pt
+                    check = True
+                    break
+        if check :
+            check = False
+            break
+    
+    key = cv2.waitKey()
+    if key == ord('q') or key == ord('Q') :
+        break
+
+#print(skelton_mask[99:105,192:200])
+
+
+
 
 
 """              
