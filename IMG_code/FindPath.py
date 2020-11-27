@@ -4,7 +4,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from skimage.morphology import skeletonize
 
-path = "C:/Users/ASUS/OneDrive/My work/Project_module7/IMG_test/"
+path = "C:/Users/wisar/OneDrive/My work/Project_module7/IMG_test/"
 all_target_sym =[[5,"Star"],[3,"Triangle"],[4,"Rectangle"]]
 window_name = "Edge Detection"
 pre_map_img = cv2.imread(path+"Map_2A.jpg")
@@ -102,42 +102,83 @@ for index in range(len(cntset["cnts"])):
 erosion = cv2.erode(binary_img,kernel,iterations = 1)
 skelton_mask = skeletonize(erosion, method='lee')
 
+pt = [0,0]
+
 for sym in syms :
     if sym.name == "Star":
-        ori_pt = sym.mid
+        pt[0],pt[1] = sym.mid[0],sym.mid[1]
     x,y,w,h = sym.box
     w,h = w+scale_rect,h+scale_rect
     skelton_mask[y:y+h,x:x+w] = 0
     pts = np.argwhere(skelton_mask[y-1:y+h+1,x-1:x+w+1]==255)
     for index in range(len(pts[:2])) :
         cv2.line(skelton_mask, (x-1+pts[index][1],y-1+pts[index][0]), (sym.mid[0],sym.mid[1]), 255,1)
+        skelton_mask[sym.mid[1]][sym.mid[0]] = 250
 
 
-pt = [0,0]
-pt[0],pt[1] = ori_pt[0],ori_pt[1]
-check = False
 
 kernel = [[0,1,2],[0,2],[0,1,2]]
-
+NB_check = False
+deadRoad_check = False
+list_path = []
+list_path.append([])
+list_path[0].append(pt.copy())
+last_theta = 0
+index_path = 0
+last_ch_pt = [0,0]
+count = 0
+print(list_path)
 while(1):
     img = cv2.circle(skelton_mask.copy(),(pt[0],pt[1]) , 2, 255, 2)
     cv2.imshow(window_name,img)
     for j in range(3):
         for i in kernel[j]:
             x,y = pt[0]-1+i,pt[1]-1+j
-            if skelton_mask[y][x] == 255: 
-                print("Pt : {} to Pt : {} , {}".format(pt,x,y))
-                skelton_mask[y][x] -= 1
-                pt[0],pt[1] = x,y
-                check = True
+            if skelton_mask[y][x] >= 250 :
+                delta_x = x-pt[0]
+                delta_y = pt[1]-y
+                if delta_x == 0 :
+                    if delta_y >= 0 :
+                        theta = 90.0
+                    else:
+                        theta = -90.0
+                else :
+                    theta = np.arctan2(delta_y,delta_x) * 180 / np.pi    
+                pt[0],pt[1] = x,y    
+                if skelton_mask[y][x] == 250 :
+                    list_path[index_path].append(pt.copy())
+                    list_path.append([pt.copy()])
+                    count = 0
+                    last_theta = theta
+                    print(list_path)
+                    index_path += 1
+                if last_theta != theta :
+                    last_ch_pt = pt.copy()
+                    count += 1
+                if count == 7 :
+                    count = 0
+                    print(list_path)
+                    list_path[index_path].append(last_ch_pt.copy())
+                    last_theta = theta
+                    
+                print("Pt : {} to Pt : {} , {} --> Theta : {}".format(pt,x,y,theta))
+                skelton_mask[y][x] -= 100
+                NB_check = True
                 break
-        if check :
-            check = False
+            if i == 2 and j == 2:
+                deadRoad_check = True
+        if NB_check :
+            NB_check = False
             break
+    if deadRoad_check:
+        print ("Not find")
+        break
     
     key = cv2.waitKey()
     if key == ord('q') or key == ord('Q') :
         break
+
+print(list_path)
 
 """
 pts[0][0],pts[0][1],pts[1][0],pts[1][1] = 657, 100,658, 100
