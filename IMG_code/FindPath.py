@@ -4,7 +4,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from skimage.morphology import skeletonize
 
-path = "C:/Users/wisar/OneDrive/My work/Project_module7/IMG_test/"
+path = "C:/Users/ASUS/OneDrive/My work/Project_module7/IMG_test/"
 all_target_sym =[[5,"Star"],[3,"Triangle"],[4,"Rectangle"]]
 window_name = "Edge Detection"
 pre_map_img = cv2.imread(path+"Map_2A.jpg")
@@ -41,8 +41,11 @@ def find_contours(edges_,mode,area_thres,thick_=None):
                 approx_ = cv2.approxPolyDP(cnt_, epsilon, True)
                 pass_sym["approxs"].append(approx_)
                 pass_sym["boxcoords"].append(rect)
-            pass_sym["area"].append(area)
-            pass_sym["cnts"].append(cnt_)
+                pass_sym["area"].append(area)
+                pass_sym["cnts"].append(cnt_)
+            elif mode is False:
+                pass_sym["area"].append(area)
+                pass_sym["cnts"].append(cnt_)
     return pass_sym
 
 def hough_transform (edges_,minpoint,maxgap):# 500, 20
@@ -81,7 +84,7 @@ def find_symWithCorner(cntset_,target_syms,img_,mode_show):
     return pass_sym,result
 
 low_thres_cannay = 90
-kernel = np.ones((3,3),np.uint8)
+kernel = np.ones((5,5),np.uint8)
 scale_rect = 10
 
 gray_map = cv2.cvtColor(pre_map_img, cv2.COLOR_BGR2GRAY)
@@ -89,13 +92,25 @@ _,binary_img = cv2.threshold(gray_map , 0, 255, cv2.THRESH_BINARY + cv2.THRESH_O
 gray_map = unsharp_image(gray_map)
 edge_mask = cv2.Canny(gray_map, low_thres_cannay, low_thres_cannay*2,3)
 edge_mask = cv2.morphologyEx(edge_mask, cv2.MORPH_CLOSE, kernel)
-edge_mask,_ =hough_transform(edge_mask,1000,10)
+#edge_mask,_ =hough_transform(edge_mask,1000,10)
 cntset =find_contours(edge_mask,True,[500,3000])
+"""
+print(cntset["approxs"])
+for index in range(len(cntset["cnts"])):
+    #if len(cntset["approxs"][index]) == 4:
+    cv2.drawContours(pre_map_img, [cntset["cnts"][index]], 0,  (0,255,0), 2)
+    cv2.imshow(window_name,pre_map_img)
+    cv2.waitKey()
+"""
 syms,img =find_symWithCorner(cntset,all_target_sym,pre_map_img,True)
 
 
 binary_img=cv2.bitwise_not(binary_img)
 cntset =find_contours(binary_img,False,[0,0],False)
+binary_img = cv2.morphologyEx(binary_img, cv2.MORPH_CLOSE, kernel)
+
+cv2.imshow(window_name,binary_img)
+cv2.waitKey()
 
 for index in range(len(cntset["cnts"])):
     cv2.drawContours(binary_img, [cntset["cnts"][index]], 0, 255, -1)
@@ -103,6 +118,7 @@ erosion = cv2.erode(binary_img,kernel,iterations = 1)
 skelton_mask = skeletonize(erosion, method='lee')
 
 pt = [0,0]
+
 
 for sym in syms :
     if sym.name == "Star":
@@ -123,18 +139,19 @@ deadRoad_check = False
 list_path = []
 list_path.append([])
 list_path[0].append(pt.copy())
-last_theta = 0
+last_theta = None
 index_path = 0
 last_ch_pt = [0,0]
 count = 0
 print(list_path)
 while(1):
-    img = cv2.circle(skelton_mask.copy(),(pt[0],pt[1]) , 2, 255, 2)
-    cv2.imshow(window_name,img)
+    #img = cv2.circle(skelton_mask.copy(),(pt[0],pt[1]) , 2, 255, 2)
+    #cv2.imshow(window_name,img)
     for j in range(3):
         for i in kernel[j]:
             x,y = pt[0]-1+i,pt[1]-1+j
             if skelton_mask[y][x] >= 250 :
+                # Find Theta 
                 delta_x = x-pt[0]
                 delta_y = pt[1]-y
                 if delta_x == 0 :
@@ -144,41 +161,57 @@ while(1):
                         theta = -90.0
                 else :
                     theta = np.arctan2(delta_y,delta_x) * 180 / np.pi    
-                pt[0],pt[1] = x,y    
+                pt[0],pt[1] = x,y
+                if last_theta is None :
+                    last_theta = theta
                 if skelton_mask[y][x] == 250 :
                     list_path[index_path].append(pt.copy())
                     list_path.append([pt.copy()])
                     count = 0
-                    last_theta = theta
-                    print(list_path)
                     index_path += 1
+                    #print("Check point {}".format(list_path))
                 if last_theta != theta :
                     last_ch_pt = pt.copy()
                     count += 1
-                if count == 7 :
+                else :
                     count = 0
-                    print(list_path)
+                if count == 15 :
+                    count = 0
                     list_path[index_path].append(last_ch_pt.copy())
                     last_theta = theta
-                    
-                print("Pt : {} to Pt : {} , {} --> Theta : {}".format(pt,x,y,theta))
+                    #print("Add point {}".format(list_path))    
+                #print("Pt : {} to Pt : {} , {} --> Theta : {}".format(pt,x,y,theta))
                 skelton_mask[y][x] -= 100
                 NB_check = True
                 break
             if i == 2 and j == 2:
+                list_path[index_path].append(pt.copy())
                 deadRoad_check = True
         if NB_check :
             NB_check = False
             break
     if deadRoad_check:
-        print ("Not find")
+        #print ("Not find")
         break
     
-    key = cv2.waitKey()
-    if key == ord('q') or key == ord('Q') :
-        break
+    #key = cv2.waitKey()
+    #if key == ord('q') or key == ord('Q') :
+    #    break
 
+
+blue = (255,0,0)
+red = (0,255,0)
+i = 0
+color = [blue,red]
 print(list_path)
+for pts in list_path:
+    for pt in pts:
+        pre_map_img = cv2.circle(pre_map_img,(pt[0],pt[1]) , 2,color[i], 2)
+    i^=1
+cv2.imshow("Mask",skelton_mask)
+cv2.imshow(window_name,pre_map_img)
+cv2.waitKey()
+
 
 """
 pts[0][0],pts[0][1],pts[1][0],pts[1][1] = 657, 100,658, 100
