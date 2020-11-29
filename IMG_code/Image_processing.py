@@ -3,13 +3,12 @@ import cv2
 from cv2 import aruco
 
 class Image :
-
-    def __init__(self,cap_index):
-        self.cap = cv2.VideoCapture(cap_index)
+#  
+    def __init__(self,camera_index):
+        self.cap = cv2.VideoCapture(camera_index)
         self.image = None
         self.gray_image = None
-    
-            
+      
     def update_img(self,img):
         self.image = img 
         self.gray_image = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
@@ -22,9 +21,6 @@ class Image :
         else:
             return False
     
-#------------------------
-
-#   Color Detection
     def clr_masking (self,hue_,sat_,val_):            # Make Mask ( one range color) : [low,up] degree , sat % and val %   
         img = cv2.cvtColor(self.image, cv2.COLOR_BGR2HSV)
         lower_color = np.array([hue_[0],sat_[0]*255/100,val_[0]*255/100],dtype = np.uint8)
@@ -130,11 +126,11 @@ class Calibration :
 
 
 
-
-class Aruco :
+class BG_subtractor :
 # Can crop with one ARUCO mark
 # have2test to make sure
     def __init__(self):
+        self.imgset = []
         self.Height = None
         self.Width = None
         self.aruco_dict = aruco.Dictionary_get(aruco.DICT_4X4_50)
@@ -162,10 +158,6 @@ class Aruco :
         (tl, tr, br, bl) = rect
         self.Width = np.sqrt(((br[0] - bl[0]) ** 2) + ((br[1] - bl[1]) ** 2))
         self.Height = np.sqrt(((tl[0] - bl[0]) ** 2) + ((tl[1] - bl[1]) ** 2))
-        #widthB = np.sqrt(((tr[0] - tl[0]) ** 2) + ((tr[1] - tl[1]) ** 2))
-        #maxWidth = max(int(widthA), int(widthB))
-        #heightA = np.sqrt(((tr[0] - br[0]) ** 2) + ((tr[1] - br[1]) ** 2))
-        #maxHeight = max(int(heightA), int(heightB))
 
     def perspective (self,img,rect):   
         dst = np.array([
@@ -176,13 +168,14 @@ class Aruco :
         M = cv2.getPerspectiveTransform(rect, dst)
         return cv2.warpPerspective(img, M, (self.Width, self.Height))
 
-    def cropWith_aruco(self,img):
+    def cropWith_aruco(self,img,show_mode):
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         corners, ids, _ = aruco.detectMarkers(gray,self.aruco_dict, parameters= self.parameters)
         aruco_pts = np.zeros((4, 2))
         list_id = [0,1,2,3]
         all_id = ids.tolist()
         check = False
+        show_aruco = None
         for index in range(len(all_id)):
             cor = corners[index][0]
             if all_id[index][0] in list_id:
@@ -204,11 +197,11 @@ class Aruco :
         if self.Width is not None and check:
             aruco_pts = np.asarray(aruco_pts,dtype = "float32")
             warped = self.perspective(img, aruco_pts)
-            show_aruco = aruco.drawDetectedMarkers(img, corners, ids)
+            if show_mode :
+                show_aruco = aruco.drawDetectedMarkers(img, corners, ids)
             return True,warped,show_aruco
         else :
             return False,None,None
-
 
     def save_Aruco(self,path):
         # Save the camera matrix and the distortion coefficients to given path/file. """
@@ -219,18 +212,27 @@ class Aruco :
         cv_file.release()
 
     def load_Aruco(self,path):
-        # Loads camera matrix and distortion coefficients. """
         #FILE_STORAGE_READ
         try:
             cv_file = cv2.FileStorage(path, cv2.FILE_STORAGE_READ)
-            # note we also have to specify the type to retrieve other wise we only get a
-            # FileNode object back instead of a matrix
             self.Height = cv_file.getNode("Height").mat()
             self.Width = cv_file.getNode("Width").mat()
             cv_file.release()
         except:
             print("Error: Not find W&H or wrong path")
-          
+
+    def add_imgset(self,img):
+        ret,crop_img,_ = self.cropWith_aruco(img)
+        if ret:
+            self.imgset.append(crop_img) 
+
+    def median2getBG(self):
+        imgs = np.asarray(self.imgset)
+        median_img = np.median(imgs,axis=0).astype(np.uint8)
+        return median_img
+
+
+
 
 #          Example
 """
