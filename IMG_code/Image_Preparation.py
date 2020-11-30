@@ -49,6 +49,7 @@ class Calibration :
             newcameramtx, self.roi =cv2.getOptimalNewCameraMatrix(mtx,dist,shapes,1,shapes)
             self.mpax,self.mapy = cv2.initUndistortRectifyMap(mtx,dist,None,newcameramtx,shapes,5)
             self.save_Calib(path)
+        self.imgs = []
         return ret
     
     def save_Calib(self,path):

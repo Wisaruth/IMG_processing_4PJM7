@@ -115,6 +115,7 @@ for index in range(len(cntset["cnts"])):
 erosion = cv2.erode(binary_img,kernel,iterations = 1)
 skelton_mask = skeletonize(erosion, method='lee')
 
+
 pt = [0,0]
 # 150 133
 w_real = 100
@@ -130,96 +131,16 @@ for sym in syms :
     skelton_mask[y:y+2*h,x:x+2*w] = 0
     pts = np.argwhere(skelton_mask[y-1:y+2*h+1,x-1:x+2*w+1]==255)
     for index in range(len(pts[:2])) :
+        #if pts[index][0]- sym.mid[0] >= w_real/2:
+        #    pt = [x+w,sym.mid[1]]
         cv2.line(skelton_mask, (x-1+pts[index][1],y-1+pts[index][0]), (sym.mid[0],sym.mid[1]), 255,1)
-        skelton_mask[sym.mid[1]][sym.mid[0]] = 250
+        #skelton_mask[sym.mid[1]][sym.mid[0]] = 255
 #cv2.imshow("Mask",skelton_mask)
 #cv2.waitKey()
-
-
-kernel = [[0,1,2],[0,2],[0,1,2]]
-NB_check = False
-deadRoad_check = False
-list_path = []
-list_path.append([])
-list_path[0].append(pt.copy())
-last_theta = None
-index_path = 0
-last_ch_pt = [0,0]
-count = 0
-print(list_path)
-while(1):
-    #img = cv2.circle(skelton_mask.copy(),(pt[0],pt[1]) , 2, 255, 2)
-    #cv2.imshow(window_name,img)
-    for j in range(3):
-        for i in kernel[j]:
-            x,y = pt[0]-1+i,pt[1]-1+j
-            if skelton_mask[y][x] >= 250 :
-                # Find Theta 
-                delta_x = x-pt[0]
-                delta_y = pt[1]-y
-                if delta_x == 0 :
-                    if delta_y >= 0 :
-                        theta = 90.0
-                    else:
-                        theta = -90.0
-                else :
-                    theta = np.arctan2(delta_y,delta_x) * 180 / np.pi    
-                pt[0],pt[1] = x,y
-                if last_theta is None :
-                    last_theta = theta
-                if skelton_mask[y][x] == 250 :
-                    list_path[index_path].append(pt.copy())
-                    list_path.append([pt.copy()])
-                    count = 0
-                    index_path += 1
-                    #print("Check point {}".format(list_path))
-                if last_theta != theta :
-                    last_ch_pt = pt.copy()
-                    count += 1
-                else :
-                    count = 0
-                if count == 20 :
-                    count = 0
-                    list_path[index_path].append(last_ch_pt.copy())
-                    last_theta = theta
-                    #print("Add point {}".format(list_path))    
-                #print("Pt : {} to Pt : {} , {} --> Theta : {}".format(pt,x,y,theta))
-                skelton_mask[y][x] -= 100
-                NB_check = True
-                break
-            if i == 2 and j == 2:
-                list_path[index_path].append(pt.copy())
-                deadRoad_check = True
-        if NB_check :
-            NB_check = False
-            break
-    if deadRoad_check:
-        #print ("Not find")
-        break
-    
-    #key = cv2.waitKey()
-    #if key == ord('q') or key == ord('Q') :
-    #    break
-
-
-blue = (255,0,0)
-red = (0,255,0)
-i = 0
-color = [blue,red]
-print(list_path)
-for pts in list_path:
-    for pt in pts:
-        pre_map_img = cv2.circle(pre_map_img,(pt[0],pt[1]) , 2,color[i], 2)
-    i^=1
+pnts_skel = np.column_stack(np.where(skelton_mask.transpose()!=0))
+poly_pnts = cv2.approxPolyDP(pnts_skel,0.1*skelton_mask.shape[0],False)
+#print(poly_pnts[0][0])
+cv2.polylines(pre_map_img, [poly_pnts], False, (0,0,255), 1)
 cv2.imshow("Mask",skelton_mask)
-cv2.imshow(window_name,pre_map_img)
-cv2.waitKey()
-
-
-#print(skelton_mask[99:105,192:200])
-
-
-
-
-
-
+cv2.imshow("IMG",pre_map_img)
+cv2.waitKey()    
