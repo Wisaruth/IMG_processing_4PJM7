@@ -4,12 +4,12 @@ import numpy as np
 from matplotlib import pyplot as plt
 from skimage.morphology import skeletonize
 
-path = "C:/Users/ASUS/OneDrive/My work/Project_module7/IMG_test/"
+path = "C:/Users/wisar/OneDrive/My work/Project_module7/IMG_test/"
 all_target_sym =[[5,"Star"],[3,"Triangle"],[4,"Rectangle"]]
 window_name = "Edge Detection"
 pre_map_img = cv2.imread(path+"Map_2A.jpg")
 real_map_img = cv2.imread(path+"real_map_B1.jpg")
-
+hvs_map = cv2.cvtColor(pre_map_img,cv2.COLOR_BGR2HSV)
 
 class Symbol:
     def __init__(self, name,mid,box):
@@ -115,6 +115,8 @@ for index in range(len(cntset["cnts"])):
 erosion = cv2.erode(binary_img,kernel,iterations = 1)
 skelton_mask = skeletonize(erosion, method='lee')
 
+#cv2.imshow("Mask",skelton_mask)
+#cv2.waitKey()
 
 last_pt = [0,0]
 # 150 133
@@ -125,17 +127,13 @@ for sym in syms :
     if sym.name == "Star":
         last_pt[0],last_pt[1] = sym.mid[0],sym.mid[1]
     x,y,w,h = sym.box
-    #w,h = w+scale_rect,h+scale_rect
     w,h =  w_real,h_real
     x,y = sym.mid[0]-round(w/2),sym.mid[1]-round(h/2)
     skelton_mask[y:y+h,x:x+w] = 0
-    #pre_map_img[y:y+h,x:x+w] = 100
     pts = np.argwhere(skelton_mask[y-1:y+h+1,x-1:x+w+1]==255)
     for index in range(len(pts[:2])) :
         delta_y = sym.mid[1]-(pts[index][0]+y)
         delta_x = pts[index][1]+x - sym.mid[0]
-        #print(pts[index][1]+x,pts[index][0]+y)
-        #print(sym.mid)
         if delta_x == 0 :
             if delta_y >= 0 :
                 theta = 90.0
@@ -154,64 +152,61 @@ for sym in syms :
             pt = [x,sym.mid[1]]
         cv2.line(skelton_mask, (x-1+pts[index][1],y-1+pts[index][0]), (pt[0],pt[1]), 255,1)
         cv2.line(skelton_mask, (pt[0],pt[1]), (sym.mid[0],sym.mid[1]), 250,1)
-        #cv2.imshow("Mask",skelton_mask)
-        #cv2.imshow("IMG",pre_map_img)
-        #cv2.waitKey()
-    skelton_mask[sym.mid[1]][sym.mid[0]] = 250
+    skelton_mask[sym.mid[1]][sym.mid[0]] = 251
 
 
 
 
 #kernel = [[0,1,2],[0,2],[0,1,2]]
+index_path = 0
+count = 0
 kernel = [[0,-1],[1,0],[0,1],[-1,0],[1,1],[1,-1],[-1,-1],[-1,1]]
 NB_check = False
 deadRoad_check = False
+check_pnt = False
 list_path = []
-list_path.append([])
-list_path[0].append(last_pt.copy())
-check_pnt = 0
-index_path = 0
-count = 0
+list_inten = []
+list_color = []
+order_syms_pnts = []
 while(1):
-    #img = cv2.circle(skelton_mask.copy(),(pt[0],pt[1]) , 2, 255, 2)
-    #cv2.imshow(window_name,img)
     for i in range(len(kernel)):
         x,y = last_pt[0]+kernel[i][0],last_pt[1]+kernel[i][1]
         if skelton_mask[y][x] >= 250 : 
+            skelton_mask[last_pt[1]][last_pt[0]] -= 100
             last_pt[0],last_pt[1] = x,y
-            if skelton_mask[y][x] == 250 and check_pnt == 0 :
+            if skelton_mask[y][x] != 255 and check_pnt == False :
                 list_path.append([])
-                index_path += 1
-                check_pnt = 1
-                #print("Check point {}".format(list_path))
-            if skelton_mask[y][x] != 250 :
+                #list_inten.append([])
+                if len(list_path) != 1 :
+                    index_path += 1
+                check_pnt = True
+            if skelton_mask[y][x] == 255 :
                 list_path[index_path].append(last_pt.copy())
-                check_pnt = 0
-            skelton_mask[y][x] -= 100
+                #list_inten[index_path].append(hvs_map[y][x])
+                check_pnt = False
+            if skelton_mask[y][x] == 251:
+                order_syms_pnts.append(last_pt.copy())
             NB_check = True
             break
-        elif i == len(kernel)-1  :
+        elif i == 7  :
             deadRoad_check = True
         if NB_check :
             NB_check = False
             break
     if deadRoad_check:
-        #print ("Not find")
         break
-print (len(list_path))
+
+
+poly_lines =[]
 for skl in list_path:
     pnts_skel = np.array(skl)
-    #pnts_skel = np.column_stack(np.where(skelton_mask.transpose()!=0))
     poly_pnts = cv2.approxPolyDP(pnts_skel,0.02*skelton_mask.shape[1],False)
-    #print(poly_pnts[0][0])
-    cv2.polylines(pre_map_img, [poly_pnts], False, (0,0,255), 1)
-    print(len(pnts_skel))
-    #print(pnts_skel)
-    cv2.imshow("IMG",pre_map_img)
-    cv2.waitKey()
-#cv2.imshow("Mask",skelton_mask)
+    poly_lines.append(poly_pnts)
 
-#for sym in syms :
-#    print(sym.name)
-#    print(skelton_mask[pnts_skel[-1][1]-3:pnts_skel[-1][1]-3+5,pnts_skel[-1][0]-3:pnts_skel[-1][0]-3+10])
     
+for line in poly_lines :
+    for pnts in line :
+        cv2.circle(pre_map_img,(pnts[0][0],pnts[0][1]) , 2, (255,0,0), 2)
+cv2.imshow("IMG",pre_map_img)
+cv2.imshow("Mask",skelton_mask)
+cv2.waitKey()
