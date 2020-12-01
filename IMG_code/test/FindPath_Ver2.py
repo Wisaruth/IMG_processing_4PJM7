@@ -4,7 +4,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from skimage.morphology import skeletonize
 
-path = "C:/Users/wisar/OneDrive/My work/Project_module7/IMG_test/"
+path = "C:/Users/ASUS/OneDrive/My work/Project_module7/IMG_test/"
 all_target_sym =[[5,"Star"],[3,"Triangle"],[4,"Rectangle"]]
 window_name = "Edge Detection"
 pre_map_img = cv2.imread(path+"Map_2A.jpg")
@@ -172,7 +172,7 @@ while(1):
     for i in range(len(kernel)):
         x,y = last_pt[0]+kernel[i][0],last_pt[1]+kernel[i][1]
         if skelton_mask[y][x] >= 250 : 
-            skelton_mask[last_pt[1]][last_pt[0]] -= 100
+            skelton_mask[last_pt[1]][last_pt[0]] = 0
             last_pt[0],last_pt[1] = x,y
             if skelton_mask[y][x] != 255 and check_pnt == False :
                 list_path.append([])
@@ -203,10 +203,90 @@ for skl in list_path:
     poly_pnts = cv2.approxPolyDP(pnts_skel,0.02*skelton_mask.shape[1],False)
     poly_lines.append(poly_pnts)
 
-    
+#cv2.polylines(skelton_mask, poly_lines,False, 255, 1)    
 for line in poly_lines :
     for pnts in line :
         cv2.circle(pre_map_img,(pnts[0][0],pnts[0][1]) , 2, (255,0,0), 2)
+        skelton_mask[pnts[0][1]][pnts[0][0]] = 255
+
+cv2.imshow("Mask",skelton_mask)
+cv2.waitKey()
+                    
+"""
+now_pt[0],now_pt[1] = poly_lines[0][0][0][0],poly_lines[0][0][0][1]
+
+while(1):
+    for i in range(len(kernel)):
+        x,y = now_pt[0]+kernel[i][0],now_pt[1]+kernel[i][1]
+        if skelton_mask[y][x] >= 250 : 
+            skelton_mask[last_pt[1]][last_pt[0]] = 0
+            
+            if skelton_mask[y][x] != 255  :
+                #list_path.append([])
+                list_inten.append([])
+                if len(list_inten) != 1 :
+                    index_path += 1
+            if skelton_mask[y][x] == 255 :
+                #list_path[index_path].append(last_pt.copy())
+                list_inten[index_path].append(hvs_map[y][x])
+                check_pnt = False
+            #if skelton_mask[y][x] == 251:
+            #    order_syms_pnts.append(last_pt.copy())
+            NB_check = True
+            last_pt[0],last_pt[1] =now_pt[0],now_pt[1]
+            now_pt[0],now_pt[1] = x,y
+            break
+        elif i == 7  :
+            deadRoad_check = True
+        if NB_check :
+            NB_check = False
+            break
+    if deadRoad_check:
+        break
+
 cv2.imshow("IMG",pre_map_img)
 cv2.imshow("Mask",skelton_mask)
 cv2.waitKey()
+"""
+
+
+run_set= [0,0,1]
+index_input = True
+for line in poly_lines :
+    if len(line) > 1 :
+        for index in range(len(line)-1):
+            delta_y = line[index+1][0][1] - line[index][0][1]
+            delta_x = line[index+1][0][0] - line[index][0][0]
+            if delta_x == 0 :
+                m = 0
+            else :
+                m = delta_y/delta_x
+            if  abs(delta_y) > abs(delta_x) :
+                index_input = True
+                run_set[0],run_set[1] = line[index][0][1],line[index+1][0][1]
+                if delta_y < 0 :
+                    run_set[2] = -1
+                else :
+                    run_set[2] = 1
+            else :
+                index_input = False
+                run_set[0],run_set[1] = line[index][0][0],line[index+1][0][0]
+                if delta_x < 0 :
+                    run_set[2] = -1
+                else :
+                    run_set[2] = 1
+            for i in range(run_set[0],run_set[1]+1,run_set[2]):
+                if index_input :
+                    x = round((i-line[index][0][1])/m + line[index][0][0])
+                    y = i
+                else :
+                    y = round((i-line[index][0][0])*m + line[index][0][1])
+                    x = i
+                if skelton_mask[y][x] ==255:
+                    print("A")
+                
+                cv2.circle(pre_map_img,(x,y) , 2, (0,0,255), 2)
+                cv2.imshow("IMG",pre_map_img)
+                #cv2.imshow("Mask",skelton_mask)
+                cv2.waitKey()
+                    
