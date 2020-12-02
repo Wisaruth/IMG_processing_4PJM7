@@ -120,7 +120,6 @@ skelton_mask = skeletonize(erosion, method='lee')
 #cv2.waitKey()
 
 last_pt = [0,0]
-# 150 133
 w_real = 140
 h_real = 140
 
@@ -152,6 +151,7 @@ for sym in syms :
 
 
 
+
 #kernel = [[0,1,2],[0,2],[0,1,2]]
 index_path = 0
 count = 0
@@ -160,9 +160,8 @@ NB_check = False
 deadRoad_check = False
 check_pnt = False
 list_path = []
-list_inten = []
-list_color = []
 order_syms_pnts = []
+order_syms_pnts.append(last_pt.copy())
 while(1):
     for i in range(len(kernel)):
         x,y = last_pt[0]+kernel[i][0],last_pt[1]+kernel[i][1]
@@ -171,13 +170,11 @@ while(1):
             last_pt[0],last_pt[1] = x,y
             if skelton_mask[y][x] != 255 and check_pnt == False :
                 list_path.append([])
-                #list_inten.append([])
                 if len(list_path) != 1 :
                     index_path += 1
                 check_pnt = True
             if skelton_mask[y][x] == 255 :
                 list_path[index_path].append(last_pt.copy())
-                #list_inten[index_path].append(hvs_map[y][x])
                 check_pnt = False
             if skelton_mask[y][x] == 251:
                 order_syms_pnts.append(last_pt.copy())
@@ -202,23 +199,29 @@ for skl in list_path:
 for line in poly_lines :
     for pnts in line :
         cv2.circle(pre_map_img,(pnts[0][0],pnts[0][1]) , 2, (255,0,0), 2)
-        skelton_mask[pnts[0][1]][pnts[0][0]] = 255
+        #skelton_mask[pnts[0][1]][pnts[0][0]] = 255
 
-#cv2.imshow("Mask",skelton_mask)
-#cv2.waitKey()
 new_poly_lines = []
+list_color = []
 last_pt = [0,0]
 run_set= [0,0,1]
 index_input = True
+index_line = 0
+
 for line in poly_lines :
     if len(line) > 1 :
+        new_poly_lines.append([])
         for index in range(len(line)-1):
-            delta_y = line[index+1][0][1] - line[index][0][1]
+            delta_y = line[index][0][1] - line[index+1][0][1] 
             delta_x = line[index+1][0][0] - line[index][0][0]
-            theta = np.arctan2(delta_x,delta_y) * 180 / np.pi
-            last_inten = None
-            mat_check = False
+            theta = abs(round(np.arctan2(delta_y,delta_x) * 180 / np.pi))
+            delta_y *= -1
+            if index == 0 :
+                new_poly_lines[index_line].append([line[index][0][0],line[index][0][1],hvs_map[line[index][0][1]][line[index][0][0]][1],theta])
+            all_deriva = 0
             count = 0
+            clear_check = None
+            abs_check = None
             if delta_x == 0 :
                 m = 0
             else :
@@ -226,17 +229,87 @@ for line in poly_lines :
             if  abs(delta_y) > abs(delta_x) :
                 index_input = True
                 run_set[0],run_set[1] = line[index][0][1],line[index+1][0][1]
+                run_set[2] = 1
                 if delta_y < 0 :
-                    run_set[2] = -5
-                else :
-                    run_set[2] = 5
+                    run_set[2] = -1
             else :
                 index_input = False
                 run_set[0],run_set[1] = line[index][0][0],line[index+1][0][0]
+                run_set[2] = 1
                 if delta_x < 0 :
-                    run_set[2] = -5
-                else :
-                    run_set[2] = 5
+                    run_set[2] = -1  
+            
+            for i in range(run_set[0]+run_set[2],run_set[1],run_set[2]):
+                deriva = 0
+                for j in [1,0]:
+                    j *= run_set[2] 
+                    if index_input :
+                        x = round((i+j-line[index][0][1])/m + line[index][0][0])
+                        y = i+j
+                    else :
+                        y = round((i+j-line[index][0][0])*m + line[index][0][1])
+                        x = i+j
+                    if j == 0:
+                        deriva -= hvs_map[y][x][1]
+                    else :
+                        deriva += hvs_map[y][x][1]
+
+                all_deriva += deriva
+                if deriva > 0 :
+                    abs_check = "+"
+                elif deriva < 0:
+                    abs_check = "-"
+                elif deriva == 0:
+                    abs_check = "0"
+                
+                if clear_check == None :
+                    clear_check =  abs_check
+                elif clear_check != abs_check  :
+                    count += 1
+                    if count == 1 :
+                        last_pt[0],last_pt[1] = x,y 
+                elif count > 0 :
+                    count -= 1
+
+                if abs(all_deriva) > 40 :
+                    all_deriva = 0
+                    new_poly_lines[index_line].append([x,y,hvs_map[y][x][1],theta])
+                    pre_map_img = cv2.circle(pre_map_img,(x,y) , 2, (0,0,255), 2)
+                if count == 10 :
+                    count = 0
+                    clear_check = abs_check
+                    new_poly_lines[index_line].append([last_pt[0],last_pt[1],hvs_map[last_pt[1]][last_pt[0]][1],theta])
+                    pre_map_img = cv2.circle(pre_map_img,(last_pt[0],last_pt[1]) , 2, (0,0,255), 2)
+                #img = cv2.circle(pre_map_img.copy(),(x,y) , 2, (0,0,255), 2)
+                #print("Pt : {} {} --- {} -- {}".format(x,y,hvs_map[y][x][1],all_deriva))
+                #cv2.imshow("IMG",img)
+                #cv2.imshow("Mask",skelton_mask)
+                #key = cv2.waitKey()
+                #if key == ord('q') or key == ord('Q') :
+                    #break  
+            new_poly_lines[index_line].append([line[index+1][0][0],line[index+1][0][1],hvs_map[line[index+1][0][1]][line[index+1][0][0]][1],theta])
+        index_line +=1
+
+pre_map_img = cv2.circle(pre_map_img,(192, 372) , 2, (0,255,255), 2)
+print(new_poly_lines[0])
+print(new_poly_lines[1])
+print(new_poly_lines[2])
+cv2.imshow("IMG",img)  
+cv2.waitKey()       
+
+num = len(new_poly_lines)
+for i in range(num):
+    inten = new_poly_lines[i][0][2]
+    new_poly_lines[i] = [[order_syms_pnts[i][0],order_syms_pnts[i][1],inten,new_poly_lines[i][0][3]]] + new_poly_lines[i]
+    if i+1 < num :
+        new_poly_lines[i].append([order_syms_pnts[i+1][0],order_syms_pnts[i+1][1],inten,new_poly_lines[i][-1][3]])
+
+print("A")
+print(new_poly_lines[0])
+print(new_poly_lines[1])
+print(new_poly_lines[2])
+
+"""
             for i in range(run_set[0]+run_set[2],run_set[1],run_set[2]):
                 if index_input :
                     x = round((i-line[index][0][1])/m + line[index][0][0])
@@ -266,4 +339,5 @@ for line in poly_lines :
                 #cv2.imshow("Mask",skelton_mask)
                 key = cv2.waitKey()
                 if key == ord('q') or key == ord('Q') :
-                    break                    
+                    break  
+"""                  
