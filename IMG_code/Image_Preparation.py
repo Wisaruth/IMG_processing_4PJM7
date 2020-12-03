@@ -87,23 +87,36 @@ class BG_subtractor :
         self.aruco_dict = aruco.Dictionary_get(aruco.DICT_4X4_50)
         self.parameters =  aruco.DetectorParameters_create()
     
-    def get_rect_onePoint (self,pnts,id):
+    def get_rect_onePoint (self,pnts,id,img_shape):
         if id == 0 :
-            pnts[1][0],pnts[1][1] = pnts[0][0]+self.Width ,pnts[0][1]
             pnts[2][0],pnts[2][1] = pnts[0][0]+self.Width ,pnts[0][1]+self.Height
-            pnts[3][0],pnts[3][1] = pnts[0][0],pnts[0][1]+self.Height
+            if pnts[2][0] <= img_shape[1] and pnts[2][1] <= img_shape[0]:
+                pnts[1][0],pnts[1][1] = pnts[0][0]+self.Width ,pnts[0][1]
+                pnts[3][0],pnts[3][1] = pnts[0][0],pnts[0][1]+self.Height
+            else :
+                return False
         elif id == 1 :
-            pnts[0][0],pnts[0][1] = pnts[1][0]-self.Width ,pnts[1][1]
-            pnts[2][0],pnts[2][1] = pnts[1][0],pnts[1][1]+self.Height
             pnts[3][0],pnts[3][1] = pnts[1][0]-self.Width ,pnts[1][1]+self.Height
+            if pnts[3][0] >= 0 and pnts[3][1] <= img_shape[0] :
+                pnts[0][0],pnts[0][1] = pnts[1][0]-self.Width ,pnts[1][1]
+                pnts[2][0],pnts[2][1] = pnts[1][0],pnts[1][1]+self.Height
+            else :
+                return False
         elif id == 2 :
-            pnts[0][0],pnts[0][1] = pnts[3][0],pnts[3][1]-self.Height
             pnts[1][0],pnts[1][1] = pnts[3][0]+self.Width ,pnts[3][1]-self.Height
-            pnts[2][0],pnts[2][1] = pnts[3][0]+self.Width ,pnts[3][1]
+            if pnts[1][0] <= img_shape[1] and pnts[1][1] >= 0 :
+                pnts[0][0],pnts[0][1] = pnts[3][0],pnts[3][1]-self.Height
+                pnts[2][0],pnts[2][1] = pnts[3][0]+self.Width ,pnts[3][1]
+            else :
+                return False
         else:
             pnts[0][0],pnts[0][1] = pnts[2][0]-self.Width ,pnts[2][1]-self.Height
-            pnts[1][0],pnts[1][1] = pnts[2][0],pnts[2][1]-self.Height
-            pnts[3][0],pnts[3][1] = pnts[2][0]-self.Width ,pnts[2][1]
+            if pnts[0][0] >= 0 and pnts[0][1]  <= img_shape[0]
+                pnts[1][0],pnts[1][1] = pnts[2][0],pnts[2][1]-self.Height
+                pnts[3][0],pnts[3][1] = pnts[2][0]-self.Width ,pnts[2][1]
+            else :
+                return False
+        return True
 
     def maxWidth_Height (self,rect):
         (tl, tr, br, bl) = rect
@@ -140,7 +153,7 @@ class BG_subtractor :
                 elif all_id[index][0] is 3:
                     aruco_pts[2]=cor[0]
                 if self.Width is not None :
-                    self.get_rect_onePoint(aruco_pts,all_id[index][0])
+                    check = self.get_rect_onePoint(aruco_pts,all_id[index][0],gray.shape)
                     break
                 list_id.remove(all_id[index][0])
         if list_id == [] and self.Width is None :
