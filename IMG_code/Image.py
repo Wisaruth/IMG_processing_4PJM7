@@ -1,17 +1,21 @@
 import numpy as np
 import cv2
+from skimage.morphology import skeletonize
 
 
 class Image :
 #  
     def __init__(self,camera_index):
-        self.cap = cv2.VideoCapture(camera_index)
+        self.cap = cv2.VideoCapture(camera_index+cv2.CAP_DSHOW)
         self.image = None
-        self.gray_image = None
+        self.bin_image = None
       
     def update_img(self,img):
-        self.image = img 
-        self.gray_image = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+        kernel = np.ones((5,5),np.uint8)
+        self.image = img.copy() 
+        gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+        gray = cv2.morphologyEx(gray, cv2.MORPH_CLOSE, kernel)
+        _,self.bin_image = cv2.threshold(gray , 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         
     def saveImg(self,name,path):
         if self.image != None:
@@ -20,6 +24,25 @@ class Image :
             return True
         else:
             return False
+
+    def canny(self,low_thres):
+        kernel_size = 3
+        ratio = 2
+        blur_img = cv2.GaussianBlur(self.bin_image,(5,5),0)
+        boots_img = cv2.addWeighted(self.bin_image, 2, blur_img, -1, 0, self.bin_image) 
+        result = cv2.Canny(boots_img, low_thres, low_thres*ratio,kernel_size)
+        return result
+
+    def skelton_mask (self,cntset):
+        kernel = np.ones((5,5),np.uint8)
+        binary_img=cv2.bitwise_not(self.bin_image)
+        for cnt in cntset:
+            cv2.drawContours(binary_img, [cnt], 0, 255, -1)
+        erosion = cv2.erode(binary_img,kernel,iterations = 1)
+        mask = skeletonize(erosion, method='lee')
+        return  mask
+
+
     
     def clr_masking (self,hue_,sat_,val_):            # Make Mask ( one range color) : [low,up] degree , sat % and val %   
         img = cv2.cvtColor(self.image, cv2.COLOR_BGR2HSV)

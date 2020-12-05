@@ -16,11 +16,11 @@ class Calibration :
         ret, corners = cv2.findChessboardCorners(gray, (7,6),None)
         if ret:
             corners2 = cv2.cornerSubPix(gray,corners,(11,11),(-1,-1),criteria)
-            draw_img = cv2.drawChessboardCorners(img, (7,6), corners2,ret)
-            return draw_img
-        else:
-            return img
-
+            img = cv2.drawChessboardCorners(img, (7,6), corners2,ret)
+            #print(ret)
+        return img
+        
+        
     def calib_img(self,img):
         # crop the image
         dst = cv2.remap(img,self.mapx,self.mapy,cv2.INTER_LINEAR)
@@ -48,7 +48,7 @@ class Calibration :
         if ret:
             newcameramtx, self.roi =cv2.getOptimalNewCameraMatrix(mtx,dist,shapes,1,shapes)
             self.mpax,self.mapy = cv2.initUndistortRectifyMap(mtx,dist,None,newcameramtx,shapes,5)
-            self.save_Calib(path)
+            #self.save_Calib(path)
         self.imgs = []
         return ret
     
@@ -95,7 +95,7 @@ class BG_subtractor :
                 pnts[3][0],pnts[3][1] = pnts[0][0],pnts[0][1]+self.Height
             else :
                 return False
-        elif id == 1 :
+        """elif id == 1 :
             pnts[3][0],pnts[3][1] = pnts[1][0]-self.Width ,pnts[1][1]+self.Height
             if pnts[3][0] >= 0 and pnts[3][1] <= img_shape[0] :
                 pnts[0][0],pnts[0][1] = pnts[1][0]-self.Width ,pnts[1][1]
@@ -111,17 +111,17 @@ class BG_subtractor :
                 return False
         else:
             pnts[0][0],pnts[0][1] = pnts[2][0]-self.Width ,pnts[2][1]-self.Height
-            if pnts[0][0] >= 0 and pnts[0][1]  <= img_shape[0]
+            if pnts[0][0] >= 0 and pnts[0][1]  <= img_shape[0]:
                 pnts[1][0],pnts[1][1] = pnts[2][0],pnts[2][1]-self.Height
                 pnts[3][0],pnts[3][1] = pnts[2][0]-self.Width ,pnts[2][1]
             else :
-                return False
+                return False"""
         return True
 
     def maxWidth_Height (self,rect):
         (tl, tr, br, bl) = rect
-        self.Width = np.sqrt(((br[0] - bl[0]) ** 2) + ((br[1] - bl[1]) ** 2))
-        self.Height = np.sqrt(((tl[0] - bl[0]) ** 2) + ((tl[1] - bl[1]) ** 2))
+        self.Width = round(np.sqrt(((br[0] - bl[0]) ** 2) + ((br[1] - bl[1]) ** 2)))
+        self.Height = round(np.sqrt(((tl[0] - bl[0]) ** 2) + ((tl[1] - bl[1]) ** 2)))
 
     def perspective (self,img,rect):   
         dst = np.array([
@@ -137,35 +137,40 @@ class BG_subtractor :
         corners, ids, _ = aruco.detectMarkers(gray,self.aruco_dict, parameters= self.parameters)
         aruco_pts = np.zeros((4, 2))
         list_id = [0,1,2,3]
-        all_id = ids.tolist()
-        check = False
         show_aruco = None
-        for index in range(len(all_id)):
-            cor = corners[index][0]
-            if all_id[index][0] in list_id:
-                check = True
-                if all_id[index][0] is 0:
-                    aruco_pts[0]=cor[2]
-                elif all_id[index][0] is 1:
-                    aruco_pts[1]=cor[3]
-                elif all_id[index][0] is 2:
-                    aruco_pts[3]=cor[1]
-                elif all_id[index][0] is 3:
-                    aruco_pts[2]=cor[0]
-                if self.Width is not None :
-                    check = self.get_rect_onePoint(aruco_pts,all_id[index][0],gray.shape)
-                    break
-                list_id.remove(all_id[index][0])
-        if list_id == [] and self.Width is None :
-            self.maxWidth_Height(aruco_pts)
-        if self.Width is not None and check:
-            aruco_pts = np.asarray(aruco_pts,dtype = "float32")
-            warped = self.perspective(img, aruco_pts)
+        warped = None
+        check = False
+        if ids is not None:
+            all_id = ids.tolist()
             if show_mode :
-                show_aruco = aruco.drawDetectedMarkers(img, corners, ids)
-            return True,warped,show_aruco
-        else :
-            return False,None,None
+                show_aruco = aruco.drawDetectedMarkers(img.copy(), corners, ids)
+            for index in range(len(all_id)):
+                cor = corners[index][0]
+                if all_id[index][0] in list_id:
+                    if all_id[index][0] is 0:
+                        aruco_pts[0]=cor[2]
+                        #if self.Width is not None :
+                        #    check = self.get_rect_onePoint(aruco_pts,all_id[index][0],gray.shape)
+                        #    break
+                    elif all_id[index][0] is 1:
+                        aruco_pts[1]=cor[3]
+                    elif all_id[index][0] is 2:
+                        aruco_pts[3]=cor[1]
+                    elif all_id[index][0] is 3:
+                        aruco_pts[2]=cor[0]
+                    
+                    list_id.remove(all_id[index][0])
+
+            if list_id == [] :
+                if self.Width is None :
+                    self.maxWidth_Height(aruco_pts)
+                check = True
+
+            if self.Width is not None and check:
+                aruco_pts = np.asarray(aruco_pts,dtype = "float32")
+                warped = self.perspective(img, aruco_pts)
+        return check,warped,show_aruco
+        
 
     def save_Aruco(self,path):
         # Save the camera matrix and the distortion coefficients to given path/file. """
@@ -186,9 +191,9 @@ class BG_subtractor :
             print("Error: Not find W&H or wrong path")
 
     def add_imgset(self,img):
-        ret,crop_img,_ = self.cropWith_aruco(img)
+        ret,crop_img,_ = self.cropWith_aruco(img,False)
         if ret:
-            self.imgset.append(crop_img) 
+            self.imgset.append(crop_img.copy()) 
 
     def median2getBG(self):
         imgs = np.asarray(self.imgset)

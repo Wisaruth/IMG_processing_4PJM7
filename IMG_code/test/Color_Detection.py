@@ -3,14 +3,30 @@
 import cv2
 import numpy as np
 from matplotlib import pyplot as plt
-
+import pickle
+"""
 path = "C:/Users/wisar/OneDrive/My work/Project_module7/IMG_test/"
 window_name = 'Color Detection'
 img = cv2.imread(path+"real_map_B1.jpg")
 hsv_img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 cood = [0,0]
 ck = False
+"""
+h = 'A'
+w = 'B'
+dst = {'h':h,'w':w}
+path_folder = "C:/Users/wisar/OneDrive/My work/Project_module7/"
+folder_var = "variable4IMG/"
 
+file_ = open(path_folder+folder_var+"test.txt", 'w')
+pickle.dump(dst,file_)
+file_.close()
+
+file_ = open(path_folder+folder_var+'test.txt','r')
+dst1 = pickle.load(file_)
+file_.close()
+print(dst1)
+"""
 class Frame :
     def __init__(self, shape):
         self.table = np.zeros((shape[0],shape[1]), dtype=np.uint8)
@@ -85,14 +101,14 @@ if contours is not False :
         cv2.imshow(window_name,clrs_img)
         if key == ord('q') :
             break
-        """if ck :
+        if ck :
             img = cv2.circle(img, (cood[1],cood[0]), 2, (0, 255, 0), 3)
             print(" sat : {}".format(hsv_img[cood[0]][cood[1]]))
             print(" Level : {}".format(blue_frame.table[cood[0]][cood[1]]))
             ck = False
-        """
+        
 else :
     print("Not found")
- 
+"""
 
 

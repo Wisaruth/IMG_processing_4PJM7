@@ -1,5 +1,5 @@
 from Image import Image
-from Image_Preparation import BG_subtractor,Calibration
+from Preparation import BG_subtractor,Calibration
 import cv2
 import time
 
@@ -10,26 +10,29 @@ folder_img = "IMG_test/"
 # Setup 
 #------------------------------------
 state = 0       # mechanic state  
-num_sample = 50 # Number of image for getting background
-period = 1      # seconds 
+num_sample = 100 # Number of image for getting background
+period = 0.1      # seconds 
 
 camera = Image(camera_index = 2)           
 cam_calib = Calibration()
 field = BG_subtractor()
 
+
 print("Main ---> Test")
 print ("State SYS : {}".format(state))
+
+#field.load_Aruco(path_folder+folder_var)
 #------------------------------------
 while(1):
     if state == 0 : # Menu
         command = input()
-        if command == "A1":
+        if command == "A1":     #Find The Chessboard
             state = 1
             print ("----| State SYS : {} (Find The Chessboard)".format(state))
-        elif command == "A2":
+        elif command == "A2":   #Calibration
             state = 2
             print ("----| State SYS : {} (Calibration)".format(state))
-        elif command == "A3":
+        elif command == "A3":   #Show Calibration& ARUCO
             state = 4
             print ("----| State SYS : {} (Show Calibration & ARUCO)".format(state))
         elif command == "B1":
@@ -60,9 +63,9 @@ while(1):
     elif state == 1 : # Find The Chessboard and Show where it is on an image
         ret,img = camera.cap.read()
         if ret :
-            img = cam_calib.show_chessboard(img)
+            img=cam_calib.show_chessboard(img)
             cv2.imshow("Find The Chessboard",img)
-            key = cv2.waitKey(30)    
+        key = cv2.waitKey(30)    
         if key == ord('q') or ret is False:
             state = 0
             cv2.destroyWindow("Find The Chessboard")
@@ -106,14 +109,16 @@ while(1):
         ret,img = camera.cap.read()
         if ret:
             if cam_calib.roi is not None :
-                calib_img = cam_calib.calib_img(img)                            # Calibration
-                aruco_ret,field_img,aruco_img = field.cropWith_aruco(img,True)  # Find ARUCO
-                cv2.imshow("Calibration",calib_img)
-                if aruco_ret :
-                    cv2.imshow("Crop Image",field_img)
-                    cv2.imshow("ARUCO",aruco_img)
+                img = cam_calib.calib_img(img)                            # Calibration
+                cv2.imshow("Calibration",img)
+            aruco_ret,field_img,aruco_img = field.cropWith_aruco(img,True)  # Find ARUCO
+            if aruco_ret :
+                cv2.imshow("Crop Image",field_img)
+            if aruco_img is not None :
+                cv2.imshow("ARUCO",aruco_img)
+            cam_calib.show_chessboard(img)
             cv2.imshow("Image",img)
-            key = cv2.waitKey(30)    
+        key = cv2.waitKey(30)    
         if key == ord('q') or ret is False:
             state = 0
             cv2.destroyWindow("Image")
@@ -123,22 +128,27 @@ while(1):
             print ("----| State SYS : {}".format(state))
 
     elif state == 5: # Sampling an image and then Median them all ---| num_sample and period are the input
+        count = 0
         while(1):
             ret,img = camera.cap.read()
-            if ret and cam_calib.roi is not None:       # Sampling
-                img = cam_calib.calib_img(img)
-                field.add_imgset(img)
-            if len(field.imgset)== num_sample:
+            count+= 1
+            if ret :       # Sampling
+                if cam_calib.roi is not None:
+                    img = cam_calib.calib_img(img)
+                if field.Height is not None:
+                    field.add_imgset(img)
+            if count== num_sample:
                 break
             time.sleep(period)
         camera.update_img(field.median2getBG())         # Median
         state = 6
     
-    elif state ==6: # Show images from Sampling
+    elif state == 6: # Show images from Sampling
         count = 0
         print ("    Image in set : {}".format(len(field.imgset)))
         for img in field.imgset :
-            print ("    Image {}".format(count+1))
+            count+=1
+            print ("    Image {}".format(count))
             cv2.imshow("Image",img)
             count += 1
             key = cv2.waitKey()
@@ -154,8 +164,12 @@ while(1):
             state = 0
             cv2.destroyWindow("Image")
             print ("----| State SYS : {}".format(state))
-        else :
-            cv2.imshow("Result",camera.image)
+        cv2.imshow("Result",camera.image)
+
+    elif state ==8:
+        if field.Height is not None : 
+            field.save_Aruco(path_folder+folder_var)
+        state = 0
 
         
 
