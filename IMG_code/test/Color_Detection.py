@@ -4,29 +4,18 @@ import cv2
 import numpy as np
 from matplotlib import pyplot as plt
 import pickle
-"""
-path = "C:/Users/wisar/OneDrive/My work/Project_module7/IMG_test/"
+
+path = "C:/Users/wisar/OneDrive/My work/Project_module7/IMG_test/BG_test/"
+img = cv2.imread(path+"test_BG_100_01.jpg")
+
 window_name = 'Color Detection'
-img = cv2.imread(path+"real_map_B1.jpg")
 hsv_img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 cood = [0,0]
 ck = False
-"""
-h = 'A'
-w = 'B'
-dst = {'h':h,'w':w}
-path_folder = "C:/Users/wisar/OneDrive/My work/Project_module7/"
-folder_var = "variable4IMG/"
 
-file_ = open(path_folder+folder_var+"test.txt", 'w')
-pickle.dump(dst,file_)
-file_.close()
+def nothing(x):
+    pass
 
-file_ = open(path_folder+folder_var+'test.txt','r')
-dst1 = pickle.load(file_)
-file_.close()
-print(dst1)
-"""
 class Frame :
     def __init__(self, shape):
         self.table = np.zeros((shape[0],shape[1]), dtype=np.uint8)
@@ -87,18 +76,43 @@ def color_detection (img_,hsv_img_,single_mode,hue_,sat_,val_,thrshold_area):   
 hsv_ord = [0,20]
 hsv_blue = [90,120]
 hvs_all = [0,180] 
-sat = [25,100]
-val = [60,100]
+sat = [40,100]
+val = [52,80]
 blue_frame = Frame(img.shape)
-contours,clrs_img = color_detection(img,hsv_img,True,hvs_all,sat,val,500)
+contours,clrs_img = color_detection(img,hsv_img,True,hsv_blue,sat,val,1000)
 blue_frame = level_clr_map (clrs_img ,blue_frame)
 
+cv2.namedWindow(window_name)
+
+"""
+cv2.createTrackbar("HHue",window_name,0,255,nothing)
+cv2.createTrackbar("LHue",window_name,0,255,nothing)
+cv2.createTrackbar("S",window_name,0,100,nothing)
+cv2.createTrackbar("V",window_name,0,100,nothing)
+kernel = np.ones((3,3),np.uint8)
+while True:
+    key = cv2.waitKey(30)
+    #ret,frame = cap.read()
+    hhue = cv2.getTrackbarPos("HHue",window_name)
+    lhue = cv2.getTrackbarPos("LHue",window_name)
+    s = cv2.getTrackbarPos("S",window_name)
+    v = cv2.getTrackbarPos("V",window_name)
+    
+    clrs_img = single_hue_masking (img.copy(),[lhue,hhue],[s,100],[v,100])
+    cv2.imshow(window_name, clrs_img)
+    if key == ord('q') or key == ord('Q') :
+        cv2.destroyWindow(window_name)
+        break
+
+"""
+
 if contours is not False :  
-    cv2.namedWindow(window_name)
-    cv2.setMouseCallback(window_name,mouse_click)
+    #cv2.namedWindow(window_name)
+    #cv2.setMouseCallback(window_name,mouse_click)
     while True:
         key = cv2.waitKey(5)
         cv2.imshow(window_name,clrs_img)
+        cv2.imshow("IMG",img)
         if key == ord('q') :
             break
         if ck :
@@ -109,6 +123,6 @@ if contours is not False :
         
 else :
     print("Not found")
-"""
+
 
 

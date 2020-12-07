@@ -7,9 +7,18 @@ class Image :
 #  
     def __init__(self,camera_index):
         self.cap = cv2.VideoCapture(camera_index+cv2.CAP_DSHOW)
-        self.image = None
+        self.image = []
         self.bin_image = None
-      
+    
+    def setting (self):
+        codec = 0x47504A4D  # MJPG
+        self.cap.set(cv2.CAP_PROP_FPS, 60.0)
+        self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc('m','j','p','g'))
+        self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter.fourcc('M','J','P','G'))
+        #self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+        #self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+        self.cap.set(cv2.CAP_PROP_AUTOFOCUS, 0) # turn the autofocus off
+
     def update_img(self,img):
         kernel = np.ones((5,5),np.uint8)
         self.image = img.copy() 
@@ -18,7 +27,7 @@ class Image :
         _,self.bin_image = cv2.threshold(gray , 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         
     def saveImg(self,name,path):
-        if self.image != None:
+        if self.image != []:
             cv2.imwrite(path+name+".jpg",self.image) 
             print("Save Image :"+name)
             return True

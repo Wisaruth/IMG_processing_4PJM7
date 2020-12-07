@@ -87,36 +87,6 @@ class BG_subtractor :
         self.aruco_dict = aruco.Dictionary_get(aruco.DICT_4X4_50)
         self.parameters =  aruco.DetectorParameters_create()
     
-    def get_rect_onePoint (self,pnts,id,img_shape):
-        if id == 0 :
-            pnts[2][0],pnts[2][1] = pnts[0][0]+self.Width ,pnts[0][1]+self.Height
-            if pnts[2][0] <= img_shape[1] and pnts[2][1] <= img_shape[0]:
-                pnts[1][0],pnts[1][1] = pnts[0][0]+self.Width ,pnts[0][1]
-                pnts[3][0],pnts[3][1] = pnts[0][0],pnts[0][1]+self.Height
-            else :
-                return False
-        """elif id == 1 :
-            pnts[3][0],pnts[3][1] = pnts[1][0]-self.Width ,pnts[1][1]+self.Height
-            if pnts[3][0] >= 0 and pnts[3][1] <= img_shape[0] :
-                pnts[0][0],pnts[0][1] = pnts[1][0]-self.Width ,pnts[1][1]
-                pnts[2][0],pnts[2][1] = pnts[1][0],pnts[1][1]+self.Height
-            else :
-                return False
-        elif id == 2 :
-            pnts[1][0],pnts[1][1] = pnts[3][0]+self.Width ,pnts[3][1]-self.Height
-            if pnts[1][0] <= img_shape[1] and pnts[1][1] >= 0 :
-                pnts[0][0],pnts[0][1] = pnts[3][0],pnts[3][1]-self.Height
-                pnts[2][0],pnts[2][1] = pnts[3][0]+self.Width ,pnts[3][1]
-            else :
-                return False
-        else:
-            pnts[0][0],pnts[0][1] = pnts[2][0]-self.Width ,pnts[2][1]-self.Height
-            if pnts[0][0] >= 0 and pnts[0][1]  <= img_shape[0]:
-                pnts[1][0],pnts[1][1] = pnts[2][0],pnts[2][1]-self.Height
-                pnts[3][0],pnts[3][1] = pnts[2][0]-self.Width ,pnts[2][1]
-            else :
-                return False"""
-        return True
 
     def maxWidth_Height (self,rect):
         (tl, tr, br, bl) = rect
@@ -133,7 +103,7 @@ class BG_subtractor :
         return cv2.warpPerspective(img, M, (self.Width, self.Height))
 
     def cropWith_aruco(self,img,show_mode):
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        gray = cv2.cvtColor(img.copy(), cv2.COLOR_BGR2GRAY)
         corners, ids, _ = aruco.detectMarkers(gray,self.aruco_dict, parameters= self.parameters)
         aruco_pts = np.zeros((4, 2))
         list_id = [0,1,2,3]
@@ -160,19 +130,58 @@ class BG_subtractor :
                         aruco_pts[2]=cor[0]
                     
                     list_id.remove(all_id[index][0])
-
             if list_id == [] :
                 if self.Width is None :
                     self.maxWidth_Height(aruco_pts)
                 check = True
-
             if self.Width is not None and check:
                 aruco_pts = np.asarray(aruco_pts,dtype = "float32")
                 warped = self.perspective(img, aruco_pts)
         return check,warped,show_aruco
         
+    def add_imgset(self,img):
+        ret,crop_img,_ = self.cropWith_aruco(img,False)
+        if ret:
+            self.imgset.append(crop_img.copy()) 
 
-    def save_Aruco(self,path):
+    def median2getBG(self):
+        imgs = np.asarray(self.imgset)
+        median_img = np.median(imgs,axis=0).astype(np.uint8)
+        return median_img
+
+    ### Useless and don't work out as what I expected
+    def get_rect_onePoint (self,pnts,id,img_shape): 
+        if id == 0 :
+            pnts[2][0],pnts[2][1] = pnts[0][0]+self.Width ,pnts[0][1]+self.Height
+            if pnts[2][0] <= img_shape[1] and pnts[2][1] <= img_shape[0]:
+                pnts[1][0],pnts[1][1] = pnts[0][0]+self.Width ,pnts[0][1]
+                pnts[3][0],pnts[3][1] = pnts[0][0],pnts[0][1]+self.Height
+            else :
+                return False
+        elif id == 1 :
+            pnts[3][0],pnts[3][1] = pnts[1][0]-self.Width ,pnts[1][1]+self.Height
+            if pnts[3][0] >= 0 and pnts[3][1] <= img_shape[0] :
+                pnts[0][0],pnts[0][1] = pnts[1][0]-self.Width ,pnts[1][1]
+                pnts[2][0],pnts[2][1] = pnts[1][0],pnts[1][1]+self.Height
+            else :
+                return False
+        elif id == 2 :
+            pnts[1][0],pnts[1][1] = pnts[3][0]+self.Width ,pnts[3][1]-self.Height
+            if pnts[1][0] <= img_shape[1] and pnts[1][1] >= 0 :
+                pnts[0][0],pnts[0][1] = pnts[3][0],pnts[3][1]-self.Height
+                pnts[2][0],pnts[2][1] = pnts[3][0]+self.Width ,pnts[3][1]
+            else :
+                return False
+        else:
+            pnts[0][0],pnts[0][1] = pnts[2][0]-self.Width ,pnts[2][1]-self.Height
+            if pnts[0][0] >= 0 and pnts[0][1]  <= img_shape[0]:
+                pnts[1][0],pnts[1][1] = pnts[2][0],pnts[2][1]-self.Height
+                pnts[3][0],pnts[3][1] = pnts[2][0]-self.Width ,pnts[2][1]
+            else :
+                return False
+        return True
+
+    def save_Aruco(self,path): 
         # Save the camera matrix and the distortion coefficients to given path/file. """
         cv_file = cv2.FileStorage(path, cv2.FILE_STORAGE_WRITE)
         cv_file.write("Height", self.Height)
@@ -189,13 +198,5 @@ class BG_subtractor :
             cv_file.release()
         except:
             print("Error: Not find W&H or wrong path")
+    ### 
 
-    def add_imgset(self,img):
-        ret,crop_img,_ = self.cropWith_aruco(img,False)
-        if ret:
-            self.imgset.append(crop_img.copy()) 
-
-    def median2getBG(self):
-        imgs = np.asarray(self.imgset)
-        median_img = np.median(imgs,axis=0).astype(np.uint8)
-        return median_img

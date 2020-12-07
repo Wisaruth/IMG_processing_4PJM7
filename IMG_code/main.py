@@ -8,53 +8,87 @@ folder_var = "variable4IMG/"
 folder_img = "IMG_test/"
 
 # Setup 
-#------------------------------------
+# X : 169 
+#---------------------------------------------------------
 state = 0       # mechanic state  
 num_sample = 100 # Number of image for getting background
-period = 0.1      # seconds 
-
-camera = Image(camera_index = 2)           
+period = 0.05      # seconds 
+camera_index = 2
+#---------------------------------------------------------
+camera = Image(camera_index)           
 cam_calib = Calibration()
 field = BG_subtractor()
+index_saved_img = 0
 
-
+if camera.cap.isOpened() :
+    camera.setting()
+#---------------------------------------------------------
 print("Main ---> Test")
+print("Camera state : {}".format(camera.cap.isOpened()))
 print ("State SYS : {}".format(state))
+
 
 #field.load_Aruco(path_folder+folder_var)
 #------------------------------------
 while(1):
-    if state == 0 : # Menu
+    if   state == 0 : # Menu
         command = input()
-        if command == "A1":     #Find The Chessboard
+        #Find The Chessboard
+        if command == "a1":     
             state = 1
             print ("----| State SYS : {} (Find The Chessboard)".format(state))
-        elif command == "A2":   #Calibration
-            state = 2
-            print ("----| State SYS : {} (Calibration)".format(state))
-        elif command == "A3":   #Show Calibration& ARUCO
+        #Calibration
+        #elif command == "A2":   
+        #    state = 2
+        #    print ("----| State SYS : {} (Calibration)".format(state))
+        #Show Calibration& ARUCO
+        elif command == "test":   
             state = 4
             print ("----| State SYS : {} (Show Calibration & ARUCO)".format(state))
-        elif command == "B1":
+        # Sampling image
+        elif command == "sample":
             state = 5
             print ("----| State SYS : {} (Sampling For Getting The Field)".format(state))
-        elif command == "B2":
+        #Show the result of BG subtactor
+        elif command == "median":   
             state = 7
-            print ("----| State SYS : {} (Sampling For Getting The Field)".format(state))
-        elif command == "set sample BG":
+            print ("----| State SYS : {} (Median The Field)".format(state))
+        # Set Counter of sampling
+        elif command == "set":
+            print ("        Connect Camera          : 0")
+            print ("        Show setting            : 1") 
+            print ("        Set Counter of sampling : 2") 
+            print ("        set period              : 3") 
             command = input()
-            num_sample = int(command)
-            print("Setting Completed")
-        elif command == "set period BG":
-            command = input()
-            period = int(command)
-            print("Setting Completed")
-        elif command == "save img":
-            ret = camera.saveImg("field",path_folder+folder_img)
-            if ret :
-                print("Saving Completed")
+            if command == '0':
+                camera.cap = cv2.VideoCapture(camera_index+cv2.CAP_DSHOW)
+                if camera.cap.isOpened():
+                    print("----> Connected")
+                    camera.setting()
+                else :
+                    print("----> Disconnected")
+            elif command == '1':
+                print ("--> Counter of sampling : {}".format(num_sample))
+                print ("--> Deley of sampling : {}".format(period))
+            elif command == '2':
+                num_sample = int(command)
+                print("----> Setting Completed")
+            # Set deley in sampling    
+            elif command == '3':   
+                command = input()
+                period = float(command)
+                print("----> Setting Completed")
             else :
-                print("Saving Failed")  
+                print ("----> Unknow command")
+        elif command == "save":         # save image in Image class' Object 
+            print("Saved Image : {}".format(index_saved_img))
+            command = input()
+            ret = camera.saveImg(command,path_folder+folder_img)
+            if ret :
+                index_saved_img += 1
+                print("----> Saving Completed")
+            else :
+                print("----> Saving Failed")  
         elif command == "exit":
             break
         else :
@@ -108,9 +142,9 @@ while(1):
     elif state == 4: # Show the result from Calibration & Find ARUCO markers and then show them
         ret,img = camera.cap.read()
         if ret:
-            if cam_calib.roi is not None :
-                img = cam_calib.calib_img(img)                            # Calibration
-                cv2.imshow("Calibration",img)
+            #if cam_calib.roi is not None :
+            #    img = cam_calib.calib_img(img)                            # Calibration
+            #    cv2.imshow("Calibration",img)
             aruco_ret,field_img,aruco_img = field.cropWith_aruco(img,True)  # Find ARUCO
             if aruco_ret :
                 cv2.imshow("Crop Image",field_img)
@@ -118,11 +152,11 @@ while(1):
                 cv2.imshow("ARUCO",aruco_img)
             cam_calib.show_chessboard(img)
             cv2.imshow("Image",img)
-        key = cv2.waitKey(30)    
+        key = cv2.waitKey(10)    
         if key == ord('q') or ret is False:
             state = 0
             cv2.destroyWindow("Image")
-            cv2.destroyWindow("Calibration")
+            #cv2.destroyWindow("Calibration")
             cv2.destroyWindow("Crop Image")
             cv2.destroyWindow("ARUCO")
             print ("----| State SYS : {}".format(state))
@@ -131,45 +165,50 @@ while(1):
         count = 0
         while(1):
             ret,img = camera.cap.read()
-            count+= 1
+            #print(count)
             if ret :       # Sampling
-                if cam_calib.roi is not None:
-                    img = cam_calib.calib_img(img)
+                #if cam_calib.roi is not None:
+                #img = cam_calib.calib_img(img)
+                cv2.imshow("Image",img)
                 if field.Height is not None:
                     field.add_imgset(img)
+                    #cv2.imshow("Image",field.imgset[len(field.imgset)])
+                #key = cv2.waitKey(30)
+                #if key == ord('q'):
+                #    break
             if count== num_sample:
                 break
             time.sleep(period)
-        camera.update_img(field.median2getBG())         # Median
+            count+= 1
+            #cv2.waitKey(100)
+        if len(field.imgset) != 0 :
+            camera.update_img(field.median2getBG())         # Median
         state = 6
     
     elif state == 6: # Show images from Sampling
         count = 0
-        print ("    Image in set : {}".format(len(field.imgset)))
+        print ("---->  Image in set : {}".format(len(field.imgset)))
         for img in field.imgset :
             count+=1
             print ("    Image {}".format(count))
             cv2.imshow("Image",img)
-            count += 1
             key = cv2.waitKey()
             if key == ord('q') :
                 break
-        else :
-            state = 7
-            cv2.destroyWindow("Image")
+        state = 7
+        cv2.destroyWindow("Image")
 
-    elif state ==7: # Show images from Median
+    elif state == 7: # Show images from Median
         key = cv2.waitKey(30)
+        cv2.imshow("Result",camera.image)
         if key == ord('q') or camera.image is None :
             state = 0
-            cv2.destroyWindow("Image")
+            cv2.destroyWindow("Result")
             print ("----| State SYS : {}".format(state))
-        cv2.imshow("Result",camera.image)
+        
+    
+        
 
-    elif state ==8:
-        if field.Height is not None : 
-            field.save_Aruco(path_folder+folder_var)
-        state = 0
 
         
 
