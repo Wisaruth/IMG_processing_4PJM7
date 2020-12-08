@@ -109,7 +109,9 @@ hvs_map = color_detection(crop_img,hvs_map,hsv_blue,sat,val,1000)
 # w 82 h 78
 gray = cv2.cvtColor(crop_img,cv2.COLOR_BGR2GRAY)
 all_target_sym =[[4,"Rectangle"]]
-
+low_thres_cannay = 90
+edge_mask = cv2.Canny(gray, low_thres_cannay, low_thres_cannay*2,3)
+cv2.imshow("edge_mask",edge_mask)
 #ret, corners = cv2.findChessboardCorners(gray, (5,5),None)
 #check = cv2.drawChessboardCorners(img, (5,5), corners,ret)
 #corners = cv2.goodFeaturesToTrack(gray,5,0.01,10)
