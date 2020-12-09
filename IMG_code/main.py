@@ -2,6 +2,8 @@ from Image import Image
 from Preparation import BG_subtractor,Calibration
 import cv2
 import time
+import serial
+from Control import Control,high_byte,low_byte
 
 path_folder = "C:/Users/wisar/OneDrive/My work/Project_module7/"
 folder_var = "variable4IMG/"
@@ -11,14 +13,16 @@ folder_img = "IMG_test/BG_test/"
 # X : 169 
 #---------------------------------------------------------
 state = 0       # mechanic state  
-num_sample = 100 # Number of image for getting background
-period = 0.05      # seconds 
+num_sample = 30 # Number of image for getting background
+period = 0.5      # seconds 
 camera_index = 2
 mode_rotate = 0
 #---------------------------------------------------------
 camera = Image(camera_index)           
 cam_calib = Calibration()
 field = BG_subtractor()
+com = Control(name= 'COM4')
+com.uart1_connect()
 index_saved_img = 0
 
 if camera.cap.isOpened() :
@@ -57,12 +61,16 @@ while(1):
         elif command == "reset":   
             state = 8
             print ("----| State SYS : {} (Median The Field)".format(state))
+        elif command == "mid":   
+            state = 9
+            print ("----| State SYS : {} (Median The Field)".format(state))
         # Set Counter of sampling
         elif command == "set":
             print ("        Connect Camera          : 0")
             print ("        Show setting            : 1") 
             print ("        Set Counter of sampling : 2") 
             print ("        set period              : 3") 
+            print ("        set rotation            : 4") 
             command = input()
             if command == '0':
                 camera.cap = cv2.VideoCapture(camera_index+cv2.CAP_DSHOW)
@@ -82,8 +90,16 @@ while(1):
                 command = input()
                 period = float(command)
                 print("----> Setting Completed")
+            elif command == '4':   
+                command = input()
+                if command == 'true':
+                    mode_rotate = True
+                else :
+                    mode_rotate = False
             else :
                 print ("----> Unknow command")
+        elif command == 'home':
+            com.set_home_command()
         elif command == "save":         # save image in Image class' Object 
             print("Saved Image : {}".format(index_saved_img))
             command = input()
@@ -109,65 +125,41 @@ while(1):
             cv2.destroyWindow("Find The Chessboard")
             print ("        Camera : {}".format(ret))
             print ("----| State SYS : {}".format(state))
-
-    """elif state == 2 : # Sampling The Chessboard image for calibration
-        key = cv2.waitKey()                 # press any key to continue Sampling
-        print ("        Searching...")
-        while(1):
-            if key == ord('q') :
-                state = 3
-                break
-            ret,img = camera.cap.read()
-            if ret :
-                gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-                ret_chess, corners = cv2.findChessboardCorners(gray, (7,6),None)
-                if ret_chess :
-                    cam_calib.imgs.append(gray)
-                    print("        Image : {}".format(len(cam_calib.imgs))) 
-                    state = 3
-                    break
-            else :
-                state = 0
-                break
-
-    elif state == 3:  # Find the matrix for Calibration
-        if len(cam_calib.imgs) > 3 :
-            ret = cam_calib.find_matrix4Calib(path_folder+folder_var)
-            if ret :
-                print ("        Calibrate Done")
-            else :
-                print ("        Calibrate Fail")
-        else :
-            print ("        Can't Calibrate")
-        cam_calib.imgs = []
-        state = 0
-        print ("----| State SYS : {}".format(state))"""
-        
+    
     elif state == 4: # Show the result from Calibration & Find ARUCO markers and then show them
         ret,img = camera.cap.read()
         if ret:
-            #if cam_calib.roi is not None :
-            #    img = cam_calib.calib_img(img)                            # Calibration
-            #    cv2.imshow("Calibration",img)
             aruco_ret,field_img,aruco_img = field.cropWith_aruco(img,True)  # Find ARUCO
             if aruco_ret :
+                if mode_rotate :
+                    field_img = cv2.rotate(field_img, cv2.ROTATE_90_CLOCKWISE)
                 cv2.imshow("Crop Image",field_img)
             if aruco_img is not None :
-                cv2.imshow("ARUCO",aruco_img)
+                cv2.imshow("Image",aruco_img)
             cam_calib.show_chessboard(img)
-            cv2.imshow("Image",img)
         key = cv2.waitKey(10)    
         if key == ord('q') or ret is False:
             state = 0
             cv2.destroyWindow("Image")
-            #cv2.destroyWindow("Calibration")
             cv2.destroyWindow("Crop Image")
-            cv2.destroyWindow("ARUCO")
             print ("----| State SYS : {}".format(state))
 
     elif state == 5: # Sampling an image and then Median them all ---| num_sample and period are the input
         count = 0
         command = input()
+        com.posx = 0
+        com.posz = 1140
+        data = serial.to_bytes(
+                [0x46, 0x58, high_byte(com.posx), low_byte(com.posx), 0x5A, high_byte(com.posz),
+                 low_byte(com.posz), 0x53])
+        print("X:", com.posx, "Z:", com.posz)
+        print("Passcode: ", data)
+        if com.port_connected:
+            com.ser.write(data)
+            print(com.ser.readline().decode())
+        else:
+            print("Warning: Serial Port", com.COM_PORT, "is not opened.")
+        
         while(1):
             ret,img = camera.cap.read()
             #print(count)
@@ -178,17 +170,14 @@ while(1):
                     if mode_rotate :
                         img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE) 
                     img = field.add_imgset(img.copy())
-                    cv2.imwrite(path_folder+folder_img+command+str(count)+".jpg",img)
+                    if img is not False :
+                        cv2.imwrite(path_folder+folder_img+command+str(count)+".jpg",img)
                     #cv2.imshow("Image",field.imgset[len(field.imgset)])
-                #key = cv2.waitKey(30)
-                #if key == ord('q'):
-                #    break
+
             if count== num_sample:
                 break
             time.sleep(period)
             count+= 1
-            #cv2.waitKey(100)
-             # Median
         if len(field.imgset) != 0 :
             camera.update_img(field.median2getBG()) 
         state = 6
@@ -217,6 +206,23 @@ while(1):
     elif state == 8:
         field.imgset = []
         state = 0
+        print ("----| State SYS : {}".format(state))
+
+    elif  state == 9:
+        data = serial.to_bytes(
+            [0x46, 0x58, high_byte(0), low_byte(0), 0x5A, high_byte(com.posmidz),
+             low_byte(com.posmidz), 0x53])
+        print("X: 0", "Z:", com.posmidz)
+        print("Passcode: ", data)
+        if com.port_connected:
+            com.ser.write(data)
+            print(com.ser.readline().decode())
+        else:
+            print("Warning: Serial Port", com.COM_PORT, "is not opened.")
+        state = 0
+        print ("----| State SYS : {}".format(state))
+        
+
         
     
         
