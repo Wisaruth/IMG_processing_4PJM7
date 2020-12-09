@@ -5,7 +5,7 @@ import time
 
 path_folder = "C:/Users/wisar/OneDrive/My work/Project_module7/"
 folder_var = "variable4IMG/"
-folder_img = "IMG_test/"
+folder_img = "IMG_test/BG_test/"
 
 # Setup 
 # X : 169 
@@ -14,6 +14,7 @@ state = 0       # mechanic state
 num_sample = 100 # Number of image for getting background
 period = 0.05      # seconds 
 camera_index = 2
+mode_rotate = 0
 #---------------------------------------------------------
 camera = Image(camera_index)           
 cam_calib = Calibration()
@@ -42,16 +43,19 @@ while(1):
         #    state = 2
         #    print ("----| State SYS : {} (Calibration)".format(state))
         #Show Calibration& ARUCO
-        elif command == "test":   
+        elif command == "show":   
             state = 4
             print ("----| State SYS : {} (Show Calibration & ARUCO)".format(state))
         # Sampling image
-        elif command == "sample":
+        elif command == "sam":
             state = 5
             print ("----| State SYS : {} (Sampling For Getting The Field)".format(state))
         #Show the result of BG subtactor
         elif command == "median":   
             state = 7
+            print ("----| State SYS : {} (Median The Field)".format(state))
+        elif command == "reset":   
+            state = 8
             print ("----| State SYS : {} (Median The Field)".format(state))
         # Set Counter of sampling
         elif command == "set":
@@ -106,7 +110,7 @@ while(1):
             print ("        Camera : {}".format(ret))
             print ("----| State SYS : {}".format(state))
 
-    elif state == 2 : # Sampling The Chessboard image for calibration
+    """elif state == 2 : # Sampling The Chessboard image for calibration
         key = cv2.waitKey()                 # press any key to continue Sampling
         print ("        Searching...")
         while(1):
@@ -137,7 +141,7 @@ while(1):
             print ("        Can't Calibrate")
         cam_calib.imgs = []
         state = 0
-        print ("----| State SYS : {}".format(state))
+        print ("----| State SYS : {}".format(state))"""
         
     elif state == 4: # Show the result from Calibration & Find ARUCO markers and then show them
         ret,img = camera.cap.read()
@@ -163,15 +167,18 @@ while(1):
 
     elif state == 5: # Sampling an image and then Median them all ---| num_sample and period are the input
         count = 0
+        command = input()
         while(1):
             ret,img = camera.cap.read()
             #print(count)
             if ret :       # Sampling
                 #if cam_calib.roi is not None:
                 #img = cam_calib.calib_img(img)
-                cv2.imshow("Image",img)
                 if field.Height is not None:
-                    field.add_imgset(img)
+                    if mode_rotate :
+                        img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE) 
+                    img = field.add_imgset(img.copy())
+                    cv2.imwrite(path_folder+folder_img+command+str(count)+".jpg",img)
                     #cv2.imshow("Image",field.imgset[len(field.imgset)])
                 #key = cv2.waitKey(30)
                 #if key == ord('q'):
@@ -181,8 +188,9 @@ while(1):
             time.sleep(period)
             count+= 1
             #cv2.waitKey(100)
+             # Median
         if len(field.imgset) != 0 :
-            camera.update_img(field.median2getBG())         # Median
+            camera.update_img(field.median2getBG()) 
         state = 6
     
     elif state == 6: # Show images from Sampling
@@ -199,12 +207,16 @@ while(1):
         cv2.destroyWindow("Image")
 
     elif state == 7: # Show images from Median
-        key = cv2.waitKey(30)
         cv2.imshow("Result",camera.image)
-        if key == ord('q') or camera.image is None :
+        key = cv2.waitKey(30)
+        if key == ord('q') or camera.image is None :       
             state = 0
             cv2.destroyWindow("Result")
             print ("----| State SYS : {}".format(state))
+    
+    elif state == 8:
+        field.imgset = []
+        state = 0
         
     
         

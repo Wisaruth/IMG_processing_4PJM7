@@ -29,19 +29,17 @@ def color_detection (img_,hsv_img_,hue_,sat_,val_,thrshold_area):   # Detect col
     _,all_contour,_ = cv2.findContours(mask_,cv2.RETR_TREE,
                     cv2.CHAIN_APPROX_NONE)
     if all_contour is None :                                                    # check that found contour
-        return False,False
+        return False
     mask_ = np.zeros(mask_.shape, np.uint8)                                     # make the blank mask  
     for contour in all_contour :                                                # check area 
         area = cv2.contourArea(contour)
         if area > thrshold_area:
             clr_det_contours.append(contour)
             cv2.drawContours(mask_,[contour], -1, (255), -1)
-            #for x in range(len(contour)):
-            #    cv2.circle(img, (contour[x][0][0], contour[x][0][1]), 3, (0,0,255), 2)
     if clr_det_contours is None :                                                    
-        return False,False
+        return False
     crop_clrs_img = cv2.bitwise_or(img_,img_,mask=mask_)
-    #crop_clrs_img = cv2.medianBlur(crop_clrs_img, 5)
+    crop_clrs_img = cv2.medianBlur(crop_clrs_img, 5)
     return crop_clrs_img
 
 
@@ -100,7 +98,7 @@ hsv_blue = [90,120]
 sat = [40,100]
 val = [52,80]
 
-path = "C:/Users/wisar/OneDrive/My work/Project_module7/IMG_test/BG_test/"
+path = "C:/Users/ASUS/OneDrive/My work/Project_module7/IMG_test/BG_test/"
 img = cv2.imread(path+"test_BG_100_01.jpg")
 crop_img = img[11:315,11:325]
 hvs_map = cv2.cvtColor(crop_img,cv2.COLOR_BGR2HSV)

@@ -53,34 +53,30 @@ class Image :
 
 
     
-    def clr_masking (self,hue_,sat_,val_):            # Make Mask ( one range color) : [low,up] degree , sat % and val %   
-        img = cv2.cvtColor(self.image, cv2.COLOR_BGR2HSV)
-        lower_color = np.array([hue_[0],sat_[0]*255/100,val_[0]*255/100],dtype = np.uint8)
-        upper_color = np.array([hue_[1],sat_[1]*255/100,val_[1]*255/100],dtype = np.uint8)
-        return cv2.inRange(img,lower_color,upper_color)
+def hue_masking (clr_img2mask,range_clr,range_sat,range_val):            # Make Mask ( one range color) : [low,up] degree , sat % and val %   
+    lower_color = np.array([range_clr[0],range_sat[0]*255/100,range_val[0]*255/100],dtype = np.uint8)
+    upper_color = np.array([range_clr[1],range_sat[1]*255/100,range_val[1]*255/100],dtype = np.uint8)
+    return cv2.inRange(clr_img2mask,lower_color,upper_color)
 
-    def color_detection (self,single_mode,hue,sat,val,thrshold_area):   # Detect color
-        clr_det_contours =[]
-        if single_mode :                                                            # find the color mask
-            mask = self.clr_masking(hue,sat,val)
-        else :
-            mask1 = self.clr_masking (hue[0],sat,val)
-            mask2 = self.clr_masking (hue[1],sat,val,)
-            mask = mask1+mask2               
-        _,all_contour,_ = cv2.findContours(mask,cv2.RETR_TREE,cv2.CHAIN_APPROX_NONE)
-        if all_contour is None :                                                    # check that found contour
-            return False,False
-        mask = np.zeros(mask.shape, np.uint8)                                     # make the blank mask  
-        for contour in all_contour :                                                # check area 
-            area = cv2.contourArea(contour)
-            if area > thrshold_area:
-                clr_det_contours.append(contour)
-                cv2.drawContours(mask,[contour], -1, (255), -1)
-        if clr_det_contours is None :                                                    
-            return False,False
-        crop_clrs_img = cv2.bitwise_or(self.image,self.image,mask=mask)
-        crop_clrs_img = cv2.medianBlur(crop_clrs_img, 3)
-        return clr_det_contours,crop_clrs_img
+
+def color_detection (img_,hsv_img_,hue_,sat_,val_,thrshold_area):   # Detect color
+    clr_det_contours =[]
+    mask_ = hue_masking (hsv_img_,hue_,sat_,val_)
+    _,all_contour,_ = cv2.findContours(mask_,cv2.RETR_TREE,
+                    cv2.CHAIN_APPROX_NONE)
+    if all_contour is None :                                                    # check that found contour
+        return False
+    mask_ = np.zeros(mask_.shape, np.uint8)                                     # make the blank mask  
+    for contour in all_contour :                                                # check area 
+        area = cv2.contourArea(contour)
+        if area > thrshold_area:
+            clr_det_contours.append(contour)
+            cv2.drawContours(mask_,[contour], -1, (255), -1)
+    if clr_det_contours is None :                                                    
+        return False
+    crop_clrs_img = cv2.bitwise_or(img_,img_,mask=mask_)
+    crop_clrs_img = cv2.medianBlur(crop_clrs_img, 5)
+    return crop_clrs_img
 
 
 

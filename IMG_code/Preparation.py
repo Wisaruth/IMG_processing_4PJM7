@@ -14,10 +14,10 @@ class Calibration :
         criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
         gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
         ret, corners = cv2.findChessboardCorners(gray, (7,6),None)
+        result = img.copy()
         if ret:
             corners2 = cv2.cornerSubPix(gray,corners,(11,11),(-1,-1),criteria)
-            img = cv2.drawChessboardCorners(img, (7,6), corners2,ret)
-            #print(ret)
+            result = cv2.drawChessboardCorners(result, (7,6), corners2,ret)
         return img
         
         
@@ -51,9 +51,9 @@ class Calibration :
             #self.save_Calib(path)
         self.imgs = []
         return ret
-    
+    """
     def save_Calib(self,path):
-        # Save the camera matrix and the distortion coefficients to given path/file. """
+        # Save the camera matrix and the distortion coefficients to given path/file. 
         cv_file = cv2.FileStorage(path, cv2.FILE_STORAGE_WRITE)
         cv_file.write("mapx", self.mapx)
         cv_file.write("mapy", self.mapy)
@@ -62,7 +62,7 @@ class Calibration :
         cv_file.release()
 
     def load_Calib(self,path):
-        # Loads camera matrix and distortion coefficients. """
+        # Loads camera matrix and distortion coefficients.
         #FILE_STORAGE_READ
         try:
             cv_file = cv2.FileStorage(path, cv2.FILE_STORAGE_READ)
@@ -74,7 +74,7 @@ class Calibration :
             cv_file.release()
         except:
             print("Error: Not find mapx/mapy or wrong path")
-
+    """
 
 
 class BG_subtractor :
@@ -142,7 +142,9 @@ class BG_subtractor :
     def add_imgset(self,img):
         ret,crop_img,_ = self.cropWith_aruco(img,False)
         if ret:
-            self.imgset.append(crop_img.copy()) 
+            self.imgset.append(crop_img) 
+            return crop_img
+        return False
 
     def median2getBG(self):
         imgs = np.asarray(self.imgset)
