@@ -14,7 +14,7 @@ class Target:
         self.name = name
         self.num_corner = num_corner
         self.area = area
-        self.tample = img
+        self.template = img
         
     
 class Detection:
@@ -51,6 +51,23 @@ class Detection:
                     pass_sym["area"].append(area)
         return pass_sym
 
+    def check_matching(self,img,name_target,match_thres,boxcoord):
+        template = None
+        for target in self.targets:
+            if target.name == name_target :
+                template = target.template
+        if template is not None :
+            x,y,w,h = boxcoord
+            crop_img = img[y:y+h,x:x+w]
+            crop_img = cv2.cvtColor(crop_img, cv2.COLOR_BGR2GRAY)
+            crop_img = cv2.resize(crop_img, (template.shape[1], template.shape[0]),
+                            interpolation = cv2.INTER_LINEAR)
+            res = cv2.matchTemplate(crop_img,template,cv2.TM_CCOEFF_NORMED)
+            _, max_val,_,_ = cv2.minMaxLoc(res)
+            if max_val >= match_thres:
+                return True
+            else :
+                return False
     
     def find_symWithCorner(self,cntset,img = None):
         last_coord =[0,0,0]

@@ -4,6 +4,7 @@ import cv2
 import time
 import serial
 from Control import Control,high_byte,low_byte
+from Detection import Symbol,Target,Detection
 
 path_folder = "C:/Users/wisar/OneDrive/My work/Project_module7/"
 folder_var = "variable4IMG/"
@@ -21,6 +22,7 @@ mode_rotate = 0
 camera = Image(camera_index)           
 cam_calib = Calibration()
 field = BG_subtractor()
+det = Detection()
 com = Control(name= 'COM4')
 com.uart1_connect()
 index_saved_img = 0
@@ -60,13 +62,13 @@ while(1):
             print ("----| State SYS : {} (Median The Field)".format(state))
         elif command == "reset":   
             state = 8
-            print ("----| State SYS : {} (Median The Field)".format(state))
+            print ("----| State SYS : {} (Reset)".format(state))
         elif command == "mid":   
             state = 9
-            print ("----| State SYS : {} (Median The Field)".format(state))
+            print ("----| State SYS : {} (Set mid)".format(state))
         # Set Counter of sampling
         elif command == "set":
-            print ("        Connect Camera          : 0")
+            print ("        Connect Camera/Robot    : 0")
             print ("        Show setting            : 1") 
             print ("        Set Counter of sampling : 2") 
             print ("        set period              : 3") 
@@ -79,6 +81,7 @@ while(1):
                     camera.setting()
                 else :
                     print("----> Disconnected")
+                com.uart1_connect()
             elif command == '1':
                 print ("--> Counter of sampling : {}".format(num_sample))
                 print ("--> Deley of sampling : {}".format(period))
@@ -129,7 +132,7 @@ while(1):
     elif state == 4: # Show the result from Calibration & Find ARUCO markers and then show them
         ret,img = camera.cap.read()
         if ret:
-            aruco_ret,field_img,aruco_img = field.cropWith_aruco(img,True)  # Find ARUCO
+            aruco_ret,field_img,aruco_img = field.cropWith_aruco(img.copy(),True)  # Find ARUCO
             if aruco_ret :
                 if mode_rotate :
                     field_img = cv2.rotate(field_img, cv2.ROTATE_90_CLOCKWISE)
@@ -162,17 +165,13 @@ while(1):
         
         while(1):
             ret,img = camera.cap.read()
-            #print(count)
             if ret :       # Sampling
-                #if cam_calib.roi is not None:
-                #img = cam_calib.calib_img(img)
                 if field.Height is not None:
                     if mode_rotate :
                         img = cv2.rotate(img, cv2.ROTATE_90_CLOCKWISE) 
                     img = field.add_imgset(img.copy())
                     if img is not False :
                         cv2.imwrite(path_folder+folder_img+command+str(count)+".jpg",img)
-                    #cv2.imshow("Image",field.imgset[len(field.imgset)])
 
             if count== num_sample:
                 break
@@ -221,6 +220,9 @@ while(1):
             print("Warning: Serial Port", com.COM_PORT, "is not opened.")
         state = 0
         print ("----| State SYS : {}".format(state))
+
+
+
         
 
         

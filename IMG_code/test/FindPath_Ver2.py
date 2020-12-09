@@ -49,21 +49,6 @@ def find_contours(edges_,mode,area_thres,thick_=None):
                 pass_sym["cnts"].append(cnt_)
     return pass_sym
 
-def hough_transform (edges_,minpoint,maxgap):# 500, 20
-    linesP=cv2.HoughLinesP(edges_,1,np.pi/180, 100, minpoint, maxgap)
-    last_line =[0,0,0,0]
-    dis_chess =[0,0]
-    pass_line =[]
-    if linesP is not None:
-        for i in range(0, len(linesP)):
-            l = linesP[i][0]
-            cv2.line(edges_, (l[0], l[1]), (l[2], l[3]), 0,2)
-            dis_chess[0],dis_chess[1] = max(abs(last_line[0]-l[0]),abs(last_line[1]-l[1])),max(abs(last_line[2]-l[2]),abs(last_line[3]-l[3]))
-            if dis_chess[0]>10 and dis_chess[1] > 10:
-                pass_line.append(l)
-            last_line=l
-    return edges_,pass_line
-
 
 def find_symWithCorner(cntset_,target_syms,img_,mode_show):
     pass_sym =[]

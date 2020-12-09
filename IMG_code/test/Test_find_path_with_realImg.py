@@ -99,7 +99,7 @@ sat = [40,100]
 val = [52,80]
 
 path = "C:/Users/ASUS/OneDrive/My work/Project_module7/IMG_test/BG_test/"
-img = cv2.imread(path+"test_BG_100_01.jpg")
+img = cv2.imread(path+"result_rota1.jpg")
 crop_img = img[11:315,11:325]
 hvs_map = cv2.cvtColor(crop_img,cv2.COLOR_BGR2HSV)
 hvs_map = color_detection(crop_img,hvs_map,hsv_blue,sat,val,1000)
@@ -321,31 +321,12 @@ for i in range(num):
     new_poly_lines[i] = [[order_syms_pnts[i][0],order_syms_pnts[i][1],inten,new_poly_lines[i][0][3]]] + new_poly_lines[i]
     if i+1 < num :
         new_poly_lines[i].append([order_syms_pnts[i+1][0],order_syms_pnts[i+1][1],inten,new_poly_lines[i][-1][3]])
-print(new_poly_lines[0])
+#print(new_poly_lines[0])
 cv2.imshow("IMG",crop_img)
 cv2.imshow("HSV",hvs_map)
 
 cv2.waitKey()      
 
-
-"""
-print(cntset["approxs"])
-for index in range(len(cntset["cnts"])):
-    #if len(cntset["approxs"][index]) == 4:
-    cv2.drawContours(crop_img, [cntset["cnts"][index]], 0,  (0,255,0), 2)
-    cv2.imshow("IMG",crop_img)
-    cv2.waitKey()
-"""
-"""
-cv2.namedWindow("IMG")
-cv2.setMouseCallback("IMG",mouse_click)
-while True:
-    key = cv2.waitKey(30)
-    if  key == ord('q') :
-        break
-
-    cv2.imshow("IMG",img)
-"""
 
 
 

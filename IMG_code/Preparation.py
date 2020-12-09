@@ -119,9 +119,6 @@ class BG_subtractor :
                 if all_id[index][0] in list_id:
                     if all_id[index][0] is 0:
                         aruco_pts[0]=cor[2]
-                        #if self.Width is not None :
-                        #    check = self.get_rect_onePoint(aruco_pts,all_id[index][0],gray.shape)
-                        #    break
                     elif all_id[index][0] is 1:
                         aruco_pts[1]=cor[3]
                     elif all_id[index][0] is 2:
@@ -140,7 +137,7 @@ class BG_subtractor :
         return check,warped,show_aruco
         
     def add_imgset(self,img):
-        ret,crop_img,_ = self.cropWith_aruco(img,False)
+        ret,crop_img,_ = self.cropWith_aruco(img,True)
         if ret:
             self.imgset.append(crop_img) 
             return crop_img
@@ -183,22 +180,4 @@ class BG_subtractor :
                 return False
         return True
 
-    def save_Aruco(self,path): 
-        # Save the camera matrix and the distortion coefficients to given path/file. """
-        cv_file = cv2.FileStorage(path, cv2.FILE_STORAGE_WRITE)
-        cv_file.write("Height", self.Height)
-        cv_file.write("Width", self.Width)
-        # note you *release* you don't close() a FileStorage object
-        cv_file.release()
-
-    def load_Aruco(self,path):
-        #FILE_STORAGE_READ
-        try:
-            cv_file = cv2.FileStorage(path, cv2.FILE_STORAGE_READ)
-            self.Height = cv_file.getNode("Height").mat()
-            self.Width = cv_file.getNode("Width").mat()
-            cv_file.release()
-        except:
-            print("Error: Not find W&H or wrong path")
-    ### 
 

@@ -32,14 +32,22 @@ def bgr_equalized(img_):
     return eq_image
 
 
-path = "C:/Users/ASUS/OneDrive/My work/Project_module7/IMG_test/"
+path = "C:/Users/ASUS/OneDrive/My work/Project_module7/IMG_test/BG_test/"
+img = cv2.imread(path+"result_rota1.jpg",0)
 window_name = 'Color Detection'
-img = cv2.imread(path+"Edge_img0.jpg",0)
 cv2.imshow("Original",img)
 #hsv_img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-res = gamma_fc (img,0.7)
+#res = gamma_fc (img,0.7)
   
 # show the plotting graph of an image 
 
-cv2.imshow("Result",res)
-cv2.waitKey()
+#cv2.imshow("Result",res)
+#cv2.waitKey()
+
+plt.hist(img.ravel(),256,[0,256])
+plt.show()
+
+img =cv2.equalizeHist(img)
+cv2.imshow("A",img)
+plt.hist(img.ravel(),256,[0,256])
+plt.show()
