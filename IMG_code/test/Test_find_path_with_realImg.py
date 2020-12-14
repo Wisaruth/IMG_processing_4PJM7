@@ -98,15 +98,15 @@ hsv_blue = [90,120]
 sat = [40,100]
 val = [52,80]
 
-path = "C:/Users/ASUS/OneDrive/My work/Project_module7/IMG_test/BG_test/"
-img = cv2.imread(path+"result_rota1.jpg")
+path = "C:/Users/wisar/OneDrive/My work/Project_module7/IMG_test/BG_test/"
+img = cv2.imread(path+"M1AK3.jpg")
 crop_img = img[11:315,11:325]
 hvs_map = cv2.cvtColor(crop_img,cv2.COLOR_BGR2HSV)
 hvs_map = color_detection(crop_img,hvs_map,hsv_blue,sat,val,1000)
 
 # w 82 h 78
 gray = cv2.cvtColor(crop_img,cv2.COLOR_BGR2GRAY)
-all_target_sym =[[4,"Rectangle"]]
+all_target_sym =[[3,"Rectangle"]]
 low_thres_cannay = 90
 edge_mask = cv2.Canny(gray, low_thres_cannay, low_thres_cannay*2,3)
 cv2.imshow("edge_mask",edge_mask)
@@ -215,7 +215,7 @@ while(1):
 poly_lines =[]
 for skl in list_path:
     pnts_skel = np.array(skl)
-    poly_pnts = cv2.approxPolyDP(pnts_skel,0.02*skelton_mask.shape[1],False)
+    poly_pnts = cv2.approxPolyDP(pnts_skel,0.1*skelton_mask.shape[1],False)
     poly_lines.append(poly_pnts)
 
 
@@ -321,7 +321,7 @@ for i in range(num):
     new_poly_lines[i] = [[order_syms_pnts[i][0],order_syms_pnts[i][1],inten,new_poly_lines[i][0][3]]] + new_poly_lines[i]
     if i+1 < num :
         new_poly_lines[i].append([order_syms_pnts[i+1][0],order_syms_pnts[i+1][1],inten,new_poly_lines[i][-1][3]])
-#print(new_poly_lines[0])
+print(new_poly_lines[0])
 cv2.imshow("IMG",crop_img)
 cv2.imshow("HSV",hvs_map)
 

@@ -9,6 +9,11 @@ class Image :
         self.cap = cv2.VideoCapture(camera_index+cv2.CAP_DSHOW)
         self.image = []
         self.bin_image = None
+        self.HSV_image = None
+        self.hue = None
+        self.sat = None
+        self.val = None
+
     
     def setting (self):
         codec = 0x47504A4D  # MJPG
@@ -21,10 +26,19 @@ class Image :
 
     def update_img(self,img):
         kernel = np.ones((5,5),np.uint8)
-        self.image = img.copy() 
-        gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+        self.image = img[11:310,9:325].copy() 
+        gray = cv2.cvtColor(self.image,cv2.COLOR_BGR2GRAY)
         gray = cv2.morphologyEx(gray, cv2.MORPH_CLOSE, kernel)
         _,self.bin_image = cv2.threshold(gray , 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        self.bin_image = 255-self.bin_image
+        self.HSV_image = cv2.cvtColor(self.image ,cv2.COLOR_BGR2HSV)
+
+    def show_OTSU(self,img,size):
+        kernel = np.ones((size,size),np.uint8)
+        gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+        _,OTSU_img = cv2.threshold(gray , 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        OTSU_img = cv2.morphologyEx(OTSU_img, cv2.MORPH_CLOSE, kernel)
+        return OTSU_img
         
     def saveImg(self,name,path):
         if self.image != []:
@@ -42,41 +56,42 @@ class Image :
         result = cv2.Canny(boots_img, low_thres, low_thres*ratio,kernel_size)
         return result
 
-    def skelton_mask (self,cntset):
-        kernel = np.ones((5,5),np.uint8)
-        binary_img=cv2.bitwise_not(self.bin_image)
-        for cnt in cntset:
-            cv2.drawContours(binary_img, [cnt], 0, 255, -1)
+    def skelton_mask (self,binary_img,size):
+        kernel = np.ones((size,size),np.uint8)
+        #for cnt in cntset:
+        #    cv2.drawContours(self.bin_image, [cnt], 0, 255, -1)
         erosion = cv2.erode(binary_img,kernel,iterations = 1)
         mask = skeletonize(erosion, method='lee')
         return  mask
 
 
     
-def hue_masking (clr_img2mask,range_clr,range_sat,range_val):            # Make Mask ( one range color) : [low,up] degree , sat % and val %   
-    lower_color = np.array([range_clr[0],range_sat[0]*255/100,range_val[0]*255/100],dtype = np.uint8)
-    upper_color = np.array([range_clr[1],range_sat[1]*255/100,range_val[1]*255/100],dtype = np.uint8)
-    return cv2.inRange(clr_img2mask,lower_color,upper_color)
+    def hue_masking (self):            # Make Mask ( one range color) : [low,up] degree , sat % and val %   
+        lower_color = np.array([self.hue[0],self.sat[0]*255/100,self.val[0]*255/100],dtype = np.uint8)
+        upper_color = np.array([self.hue[1],self.sat[1]*255/100,self.val[1]*255/100],dtype = np.uint8)
+        return cv2.inRange(self.HSV_image,lower_color,upper_color)
 
 
-def color_detection (img_,hsv_img_,hue_,sat_,val_,thrshold_area):   # Detect color
-    clr_det_contours =[]
-    mask_ = hue_masking (hsv_img_,hue_,sat_,val_)
-    _,all_contour,_ = cv2.findContours(mask_,cv2.RETR_TREE,
-                    cv2.CHAIN_APPROX_NONE)
-    if all_contour is None :                                                    # check that found contour
-        return False
-    mask_ = np.zeros(mask_.shape, np.uint8)                                     # make the blank mask  
-    for contour in all_contour :                                                # check area 
-        area = cv2.contourArea(contour)
-        if area > thrshold_area:
-            clr_det_contours.append(contour)
-            cv2.drawContours(mask_,[contour], -1, (255), -1)
-    if clr_det_contours is None :                                                    
-        return False
-    crop_clrs_img = cv2.bitwise_or(img_,img_,mask=mask_)
-    crop_clrs_img = cv2.medianBlur(crop_clrs_img, 5)
-    return crop_clrs_img
+    def color_detection (self,thrshold_area):   # Detect color
+        clr_det_contours =[]
+        mask_ = self.hue_masking ()
+        _,all_contour,_ = cv2.findContours(mask_,cv2.RETR_TREE,
+                                            cv2.CHAIN_APPROX_NONE)
+        if all_contour is None :                                                    # check that found contour
+            return False
+        mask_ = np.zeros(mask_.shape, np.uint8)                                     # make the blank mask  
+        for contour in all_contour :                                                # check area 
+            area = cv2.contourArea(contour)
+            if area > thrshold_area:
+                clr_det_contours.append(contour)
+                cv2.drawContours(mask_,[contour], -1, (255), -1)
+                kernel = np.ones((5,5),np.uint8)
+                mask_ = cv2.erode(mask_,kernel,iterations = 1)
+        if clr_det_contours is None :                                                    
+            return False
+        crop_clrs_img = cv2.bitwise_or(self.image,self.image,mask=mask_)
+        #crop_clrs_img = cv2.medianBlur(crop_clrs_img, 5)
+        return crop_clrs_img,mask_
 
 
 

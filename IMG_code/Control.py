@@ -66,28 +66,31 @@ class Control():
                 print("Warning:", self.COM_PORT, "is not opened.")
 
     def set_home_command(self):
-        data = serial.to_bytes([0x46, 0x58, 0x00, 0x00,
-                                0x5A, 0x00, 0x00,
-                                0x59, 0x00, 0x00,
-                                0x50, low_byte(0), 0x52, low_byte(135), 0x53])
-        print("SET HOME")
-        print("Passcode: ", data)
         if self.port_connected:
+            data = serial.to_bytes([0x46, 0x59, 0x00,0x00, 0x53])
             self.ser.write(data)
             print(self.ser.readline().decode())
+            data = serial.to_bytes([0x46, 0x58, 0x00, 0x00, 0x5A, 0x00, 0x00,0x53])
+            self.ser.write(data)
+            print(self.ser.readline().decode())
+            print("SET HOME")
         else:
             print("Warning: Serial Port", self.COM_PORT, "is not opened.")
     
-    def send_data_command(self):
+    def send_XZ(self):
         data = serial.to_bytes(
                 [0x46, 0x58, high_byte(self.posx), low_byte(self.posx), 0x5A, high_byte(self.posz),
                  low_byte(self.posz), 0x53])
-        print("X:", self.posx, "Z:", self.posz)
-        print("Passcode: ", data)
         if self.port_connected:
             self.ser.write(data)
             print(self.ser.readline().decode())
         else:
             print("Warning: Serial Port", self.COM_PORT, "is not opened.")
 
-    
+    def send_Y(self):
+        if self.port_connected:
+            data = serial.to_bytes([0x46, 0x59, high_byte(self.posy), low_byte(self.posy), 0x53])
+            self.ser.write(data)
+            print(self.ser.readline().decode())
+        else:
+            print("Warning: Serial Port", self.COM_PORT, "is not opened.")

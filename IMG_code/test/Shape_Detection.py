@@ -101,7 +101,11 @@ def find_symWithCorner(cntset_,target_syms,img_,mode_show):
                     pass_sym.append(new)
     return pass_sym,result
 
-
+def rotate_image(image, angle):
+    image_center = tuple(np.array(image.shape[1::-1]) / 2)
+    rot_mat = cv2.getRotationMatrix2D(image_center, angle, 1.0)
+    result = cv2.warpAffine(image, rot_mat, image.shape[1::-1], flags=cv2.INTER_LINEAR)    
+    return result
               
 
 
@@ -109,6 +113,11 @@ all_target_sym =[[5,"Star"],[3,"Triangle"],[4,"Rectangle"]]
 window_name = "Edge Detection"
 path = "C:/Users/wisar/OneDrive/My work/Project_module7/IMG_test/"
 map_img = cv2.imread(path+"Map_2A.jpg")
+for i in range(5,360,5):
+    img = rotate_image(map_img,i)
+    cv2.imshow("IMG",img)
+    print(img.shape)
+    cv2.waitKey()
 
 """
 gray_map = cv2.cvtColor(map_img, cv2.COLOR_BGR2GRAY)

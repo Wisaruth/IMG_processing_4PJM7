@@ -10,25 +10,62 @@ class Symbol:
         self.order = order
 
 class Target:
-    def __init__(self, name,num_corner,img = None,area = 0):
+    def __init__(self, name,num_corner=0,img = None,area = 0, priori=0):
         self.name = name
-        self.num_corner = num_corner
+        self.corners = num_corner
         self.area = area
         self.template = img
+        self.priori = priori
+    
+    
         
     
 class Detection:
     def __init__(self):
         self.symbols = []
         self.targets = []
-        self.count2pix_ratio = 0
+        self.ratio = 0
+        self.offset = [0,0]
         self.paths = []
         self.near_kernel = [[0,-1],[1,0],[0,1],[-1,0],[1,1],[1,-1],[-1,-1],[-1,1]]
     
     # def set_worldCoordi (self,Onecm2pix,Onecm2count):
     #    self.count2pix_ratio = Onecm2count/Onecm2pix
-    def convert2World (self,pixs):
-        return  round(self.count2pix_ratio*pixs)
+    def update_target (self,name,img,corners,area,priori):
+        new = Target(name,corners,img,area,priori)
+        self.targets.append(new)
+
+    def convert2World (self,hight,min_R=100,max_R=190):
+        
+        for path_index in range(len(self.paths)) :
+            inten = []
+            last_inten = None
+            for pnt_index in range(len(self.paths[path_index])):
+                self.paths[path_index][pnt_index][0] = self.paths[path_index][pnt_index][0]*self.ratio+self.offset[0]
+                self.paths[path_index][pnt_index][1] = (hight-self.paths[path_index][pnt_index][1])*self.ratio+self.offset[1]
+                if self.paths[path_index][pnt_index][2] == 0:
+                    if last_inten is None :
+                        for i in  range(pnt_index,len(self.paths[path_index])):
+                            if self.paths[path_index][pnt_index+i][2] != 0:
+                                self.paths[path_index][pnt_index][2] = self.paths[path_index][pnt_index+i][2]
+                                break
+                    else :
+                        self.paths[path_index][pnt_index][2] = last_inten 
+                else:
+                    last_inten= self.paths[path_index][pnt_index][2]
+                    inten.append(last_inten) 
+            max_in,min_in=max(inten),min(inten)
+            range_r=max_R-min_R
+            ratio=(max_in-min_in)/range_r
+            for pnt_index in range(len(self.paths[path_index])):
+                self.paths[path_index][pnt_index][2] =round(((self.paths[path_index][pnt_index][2]-min_in)/ratio)+min_R)
+     
+    
+    def rotation(self,img,angle):
+        img_center = tuple(np.array(img.shape[1::-1]) / 2)
+        rot_mat = cv2.getRotationMatrix2D(img_center, angle, 1.0)
+        result = cv2.warpAffine(img, rot_mat, img.shape[1::-1], flags=cv2.INTER_LINEAR)    
+        return result
     
     # Canny with high boost filter
     def find_contours(self,edges,mode,area_thres):
@@ -40,7 +77,7 @@ class Detection:
             _, cnts, _= cv2.findContours(edges,cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
         for cnt in cnts:
             area = cv2.contourArea(cnt)
-            if area > area_thres[0] and area < area_thres[1]  :
+            if area > area_thres :#and area < area_thres[1]  :
                 pass_sym["cnts"].append(cnt)
                 if  mode is True :
                     rect = cv2.boundingRect(cnt)
@@ -56,6 +93,7 @@ class Detection:
         for target in self.targets:
             if target.name == name_target :
                 template = target.template
+                break
         if template is not None :
             x,y,w,h = boxcoord
             crop_img = img[y:y+h,x:x+w]
@@ -68,13 +106,15 @@ class Detection:
                 return True
             else :
                 return False
+        else :
+            return False
     
     def find_symWithCorner(self,cntset,img = None):
         last_coord =[0,0,0]
         result = None
         for index in range(len(cntset["cnts"])) :
             for target in self.targets :
-                if len(cntset["approxs"][index])== target.num_corner:
+                if len(cntset["approxs"][index])== target.corners:
                     x,y,w,h = cntset["boxcoords"][index]
                     mid_ = [int(x+(w/2)),int(y+(h/2))]
                     dis_chess = max([abs(last_coord[0]-mid_[0]),abs(last_coord[1]-mid_[1])])
@@ -84,14 +124,21 @@ class Detection:
                             result = cv2.putText(result,target.name,(x,y),
                                                  cv2.FONT_HERSHEY_COMPLEX,1,(0,255,0),2)
                         last_coord = [mid_[0],mid_[1],max([w,h])]
-                        new = Symbol(name= target.name, mid = mid_, corner = [x,y,w,h])
+                        if target.priori == 1 :
+                            order = 0
+                        else :
+                            order = 1
+                        new = Symbol(name= target.name, 
+                                        mid = mid_, 
+                                        corner = [x,y,w,h],
+                                        order=order)
                         self.symbols.append(new)
         return result  
 
 
     def reconstruct_map (self,skelton_map,w,h):
         for index in range(len(self.symbols)) :
-            sym = self.symbols[index].copy()
+            sym = self.symbols[index]
             if sym.order == 0:
                 self.symbols.pop(index)
                 self.symbols.insert(0,sym)
@@ -115,17 +162,18 @@ class Detection:
         skelton_map[sym.mid[1]][sym.mid[0]] = 251
         return skelton_map
     
-    def XZ_path_generator (self,skelton_map,img):
+    def XZ_path_generator (self,skelton_mask,img,ep):
         index_path = 0
         found_check = False
         deadRoad_check = False
         check_pnt = False
-
         last_pt = self.symbols[0].mid.copy()
         poly_lines =[]
         lines = []
         order_syms_pnts = []
         order_syms_pnts.append(last_pt.copy())
+        if img is not None:    
+            cv2.circle(img,(last_pt[0],last_pt[1]) , 2, (0,255,0), 2)
         while(1):
             for i in range(len(self.near_kernel)):
                 x,y = last_pt[0]+self.near_kernel[i][0],last_pt[1]+self.near_kernel[i][1]
@@ -153,15 +201,15 @@ class Detection:
                 break
         for pnts in lines:
             pnts = np.array(pnts)
-            pnts = cv2.approxPolyDP(pnts,0.02*skelton_mask.shape[1],False)
+            pnts = cv2.approxPolyDP(pnts,ep*skelton_mask.shape[1],False)
             poly_lines.append(pnts)
             if img is not None:
                 for pnt in pnts :
-                    cv2.circle(img,(pnt[0][0],pnt[0][1]) , 2, (255,0,0), 2)
-        return  poly_lines,order_syms_pnts
+                    cv2.circle(img,(pnt[0][0],pnt[0][1]) , 2, (0,255,0), 2)
+        return  poly_lines,order_syms_pnts,img
 
     
-    def Y_path_generator (self,XZlines,hsv_map,max_deriva,max_count):
+    def Y_path_generator (self,img,XZlines,hsv_map,max_deriva,max_count,order_syms_pnts):
         list_color = []
         last_pt = [0,0]
         run_set= [0,0,1]
@@ -176,7 +224,7 @@ class Detection:
                     theta = abs(round(np.arctan2(delta_y,delta_x) * 180 / np.pi))
                     delta_y *= -1
                     if index == 0 :
-                        self.paths[index_line].append([line[index][0][0],line[index][0][1],hvs_map[line[index][0][1]][line[index][0][0]][2],theta])
+                        self.paths[index_line].append([line[index][0][0],line[index][0][1],hsv_map[line[index][0][1]][line[index][0][0]][2],theta])
                     all_deriva = 0
                     count = 0
                     clear_check = None
@@ -209,10 +257,10 @@ class Detection:
                                 y = round((i+j-line[index][0][0])*m + line[index][0][1])
                                 x = i+j
                             if j == 0:
-                                deriva -= hvs_map[y][x][2]
+                                deriva -= hsv_map[y][x][2]
                             else :
-                                deriva += hvs_map[y][x][2]
-                        if hvs_map[y][x][2] != 0  :
+                                deriva += hsv_map[y][x][2]
+                        if hsv_map[y][x][2] != 0  :
                             all_deriva += deriva
                             if deriva > 0 :
                                 abs_check = "+"
@@ -232,13 +280,22 @@ class Detection:
 
                             if abs(all_deriva) > max_deriva :
                                 all_deriva = 0
-                                self.paths[index_line].append([x,y,hvs_map[y][x][2],theta])
+                                self.paths[index_line].append([x,y,hsv_map[y][x][2],theta])
+                                cv2.circle(img,(x,y) , 2, (0,0,255), 2)
                             if count == max_count :
                                 count = 0
                                 clear_check = abs_check
-                                self.paths[index_line].append([last_pt[0],last_pt[1],hvs_map[last_pt[1]][last_pt[0]][2],theta])
-                    self.paths[index_line].append([line[index+1][0][0],line[index+1][0][1],hvs_map[line[index+1][0][1]][line[index+1][0][0]][2],theta])
+                                self.paths[index_line].append([last_pt[0],last_pt[1],hsv_map[last_pt[1]][last_pt[0]][2],theta])
+                                cv2.circle(img,(x,y) , 2, (0,0,255), 2)
+                    self.paths[index_line].append([line[index+1][0][0],line[index+1][0][1],hsv_map[line[index+1][0][1]][line[index+1][0][0]][2],theta])
                 index_line +=1
+        num = len(self.paths)
+        for i in range(num): 
+            inten = self.paths[i][0][2]
+            self.paths[i] = [[order_syms_pnts[i][0],order_syms_pnts[i][1],inten,self.paths[i][0][3]]] + self.paths[i]
+            if i+1 < num :
+                self.paths[i].append([order_syms_pnts[i+1][0],order_syms_pnts[i+1][1],inten,self.paths[i][-1][3]])
+
 
         return list_color
 
